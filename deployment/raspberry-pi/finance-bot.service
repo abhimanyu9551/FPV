@@ -1,0 +1,42 @@
+[Unit]
+Description=FPV Finance Telegram Bot
+Documentation=https://github.com/yourusername/fpv
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/opt/fpv-bot
+
+# Python virtual environment
+Environment="PATH=/opt/fpv-bot/venv/bin"
+ExecStart=/opt/fpv-bot/venv/bin/python -m src.main
+
+# Auto-restart on crash
+Restart=always
+RestartSec=10
+StartLimitInterval=300
+StartLimitBurst=5
+
+# Environment variables from file
+EnvironmentFile=/opt/fpv-bot/.env
+
+# Security hardening
+PrivateTmp=yes
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/fpv-bot/logs
+
+# Resource limits
+MemoryMax=256M
+CPUQuota=25%
+
+# Logging → journalctl
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=fpv-bot
+
+[Install]
+WantedBy=multi-user.target

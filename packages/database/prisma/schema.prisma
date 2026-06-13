@@ -1,0 +1,776 @@
+// FPV — Family Finance Platform
+// Prisma Schema · Single source of truth for all 28 tables
+//
+// Base currency: GBP
+// Secondary currency: INR
+// Rule: Every financial record stores original_amount, original_currency,
+//        exchange_rate_id (nullable), and base_amount_gbp.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─────────────────────────────────────────────────────────────
+// MODULE: AUTH / USERS
+// auth.users is managed by Supabase Auth.
+// UserProfile mirrors it in the public schema for app data.
+// ─────────────────────────────────────────────────────────────
+
+model UserProfile {
+  id          String   @id // Matches auth.users.id (Supabase UUID)
+  email       String   @unique
+  fullName    String
+  role        UserRole @default(MEMBER)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  incomeSources        IncomeSource[]
+  incomeEntries        IncomeEntry[]
+  remittances          Remittance[]
+  transactions         Transaction[]
+  savingsContributions SavingsContribution[]
+  investmentTx         InvestmentTransaction[]
+  debtPayments         DebtPayment[]
+  monthlySnapshots     MonthlySnapshot[]
+  exchangeRates        ExchangeRate[]
+
+  @@map("user_profiles")
+}
+
+enum UserRole {
+  ADMIN
+  MEMBER
+
+  @@map("user_role")
+}
+
+// ─────────────────────────────────────────────────────────────
+// MODULE: CURRENCY
+// ─────────────────────────────────────────────────────────────
+
+model Currency {
+  code           String  @id // ISO 4217: "GBP", "INR"
+  name           String
+  symbol         String
+  isBaseCurrency Boolean @default(false) // Only GBP = true
+  decimalPlaces  Int     @default(2)
+  isActive       Boolean @default(true)
+
+  // Relations
+  fromRates ExchangeRate[] @relation("FromCurrency")
+  toRates   ExchangeRate[] @relation("ToCurrency")
+
+  @@map("currencies")
+}
+
+model ExchangeRate {
+  id            String   @id @default(cuid())
+  fromCurrency  String
+  toCurrency    String
+  rate          Decimal  @db.Decimal(18, 8)
+  effectiveDate DateTime @db.Date
+  source        RateSource @default(MANUAL)
+  notes         String?
+  createdAt     DateTime @default(now())
+  createdById   String
+
+  // Relations
+  from          Currency    @relation("FromCurrency", fields: [fromCurrency], references: [code])
+  to            Currency    @relation("ToCurrency", fields: [toCurrency], references: [code])
+  createdBy     UserProfile @relation(fields: [createdById], references: [id])
+
+  // Every transaction references the rate used — never update, only insert
+  transactions  Transaction[]
+  remittances   Remittance[]
+
+  @@unique([fromCurrency, toCurrency, effectiveDate])
+  @@index([fromCurrency, toCurrency, effectiveDate(sort: Desc)])
+  @@map("exchange_rates")
+}
+
+enum RateSource {
+  MANUAL
+  OPEN_ER_API
+  MOCK
+
+  @@map("rate_source")
+}
+
+// ─────────────────────────────────────────────────────────────
+// MODULE: ACCOUNTS
+// ─────────────────────────────────────────────────────────────
+
+model Account {
+  id             String      @id @default(cuid())
+  name           String
+  accountType    AccountType
+  currencyCode   String      @default("GBP")
+  openingBalance Decimal     @default(0) @db.Decimal(15, 2)
+  openingDate    DateTime    @db.Date
+  institution    String?
+  notes          String?
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  deletedAt      DateTime?
+
+  // Relations
+  transactions       Transaction[]
+  creditCard         CreditCard?
+  savingsGoal        SavingsGoal?
+  investment         Investment?
+  accountBalances    AccountBalance[]
+
+  @@map("accounts")
+}
+
+enum AccountType {
+  CURRENT
+  SAVINGS
+  CREDIT_CARD
+  INVESTMENT
+  LOAN
+  CASH
+
+  @@map("account_type")
+}
+
+model AccountBalance {
+  id                  String   @id @default(cuid())
+  accountId           String
+  balanceDate         DateTime @db.Date
+  balanceAmount       Decimal  @db.Decimal(15, 2)
+  balanceAmountGbp    Decimal  @db.Decimal(15, 2)
+  isSnapshotVerified  Boolean  @default(false)
+  createdAt           DateTime @default(now())
+
+  account Account @relation(fields: [accountId], references: [id])
+
+  @@unique([accountId, balanceDate])
+  @@index([accountId, balanceDate(sort: Desc)])
+  @@map("account_balances")
+}
+
+// ─────────────────────────────────────────────────────────────
+// MODULE: INCOME & SALARY ALLOCATION ENGINE (CORE)
+// ─────────────────────────────────────────────────────────────
+
+model IncomeSource {
+  id               String          @id @default(cuid())
+  userId           String
+  name             String          // "Primary Salary", "Wife Salary", "Bonus"
+  sourceType       IncomeSourceType @default(SALARY)
+  frequency        PayFrequency    @default(MONTHLY)
+  expectedAmount   Decimal?        @db.Decimal(15, 2) // Typical monthly amount
+  currencyCode     String          @default("GBP")
+  isActive         Boolean         @default(true)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  user             UserProfile      @relation(fields: [userId], references: [id])
+  allocationRules  AllocationRule[]
+  incomeEntries    IncomeEntry[]
+
+  @@index([userId, isActive])
+  @@map("income_sources")
+}
+
+enum IncomeSourceType {
+  SALARY
+  BONUS
+  INTEREST
+  INVESTMENT_RETURN
+  OTHER
+
+  @@map("income_source_type")
+}
+
+enum PayFrequency {
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+  ANNUAL
+  IRREGULAR
+
+  @@map("pay_frequency")
+}
+
+model AllocationRule {
+  id                String         @id @default(cuid())
+  incomeSourceId    String
+  allocationOrder   Int            // 1 = highest priority
+  label             String         // "India Transfer", "Rent", "CC Minimum"
+  targetType        AllocationTarget
+  targetId          String?        // FK to Account / RemittanceCategory / BudgetCategory
+  allocationType    AllocationType
+  allocationValue   Decimal?       @db.Decimal(15, 2) // For FIXED_AMOUNT
+  allocationPercent Decimal?       @db.Decimal(5, 2)  // For PERCENTAGE (0-100)
+  minAmount         Decimal?       @db.Decimal(15, 2)
+  maxAmount         Decimal?       @db.Decimal(15, 2)
+  isEnabled         Boolean        @default(true)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  incomeSource    IncomeSource     @relation(fields: [incomeSourceId], references: [id])
+  allocationItems AllocationLedgerItem[]
+
+  @@index([incomeSourceId, allocationOrder])
+  @@map("allocation_rules")
+}
+
+enum AllocationTarget {
+  ACCOUNT
+  REMITTANCE_CATEGORY
+  BUDGET_CATEGORY
+  SAVINGS_GOAL
+  DEBT
+
+  @@map("allocation_target")
+}
+
+enum AllocationType {
+  FIXED_AMOUNT
+  PERCENTAGE
+  REMAINING
+
+  @@map("allocation_type")
+}
+
+model IncomeEntry {
+  id             String   @id @default(cuid())
+  incomeSourceId String
+  userId         String
+  receivedDate   DateTime @db.Date
+  // Multi-currency fields
+  originalAmount  Decimal @db.Decimal(15, 2)
+  originalCurrency String @default("GBP")
+  baseAmountGbp   Decimal @db.Decimal(15, 2)
+  notes          String?
+  isProcessed    Boolean  @default(false) // Has allocation engine been run?
+  processedAt    DateTime?
+  createdAt      DateTime @default(now())
+
+  incomeSource    IncomeSource          @relation(fields: [incomeSourceId], references: [id])
+  user            UserProfile           @relation(fields: [userId], references: [id])
+  allocationLedger AllocationLedger?
+
+  @@index([userId, receivedDate(sort: Desc)])
+  @@map("income_entries")
+}
+
+model AllocationLedger {
+  id              String   @id @default(cuid())
+  incomeEntryId   String   @unique
+  totalIncome     Decimal  @db.Decimal(15, 2) // Base GBP
+  totalAllocated  Decimal  @db.Decimal(15, 2)
+  remainingCash   Decimal  @db.Decimal(15, 2)
+  hasWarnings     Boolean  @default(false)
+  warningMessages String[] // e.g., ["Insufficient for savings"]
+  executedAt      DateTime @default(now())
+
+  incomeEntry IncomeEntry            @relation(fields: [incomeEntryId], references: [id])
+  items       AllocationLedgerItem[]
+
+  @@map("allocation_ledger")
+}
+
+model AllocationLedgerItem {
+  id               String  @id @default(cuid())
+  ledgerId         String
+  allocationRuleId String
+  allocatedAmount  Decimal @db.Decimal(15, 2) // GBP
+  label            String  // Snapshot of rule label at execution time
+  targetType       AllocationTarget
+  targetId         String?
+  createdAt        DateTime @default(now())
+
+  ledger          AllocationLedger @relation(fields: [ledgerId], references: [id])
+  allocationRule  AllocationRule   @relation(fields: [allocationRuleId], references: [id])
+
+  @@index([ledgerId])
+  @@map("allocation_ledger_items")
+}
+
+// ─────────────────────────────────────────────────────────────
+// MODULE: INDIA REMITTANCES
+// ─────────────────────────────────────────────────────────────
+
+model RemittanceCategory {
+  id              String   @id @default(cuid())
+  name            String   // "Dad Support", "EMI", "Chit Fund", "Investment", "Family Expenses"
+  description     String?
+  priority        Int      @default(0)
+  monthlyBudget   Decimal? @db.Decimal(15, 2) // GBP
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  remittances Remittance[]
+
+  @@map("remittance_categories")
+}
+
+model Remittance {
+  id                   String            @id @default(cuid())
+  remittanceCategoryId String
+  createdById          String
+  remittanceDate       DateTime          @db.Date
+  status               RemittanceStatus  @default(PLANNED)
+  // Multi-currency
+  originalAmount       Decimal           @db.Decimal(15, 2) // Amount in GBP
+  originalCurrency     String            @default("GBP")
+  exchangeRateId       String?
+  convertedAmount      Decimal?          @db.Decimal(15, 2) // Amount in INR
+  convertedCurrency    String?           @default("INR")
+  baseAmountGbp        Decimal           @db.Decimal(15, 2)
+  notes                String?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  category     RemittanceCategory @relation(fields: [remittanceCategoryId], references: [id])
+  createdBy    UserProfile        @relation(fields: [createdById], references: [id])
+  exchangeRate ExchangeRate?      @relation(fields: [exchangeRateId], references: [id])
+
+  @@index([remittanceCategoryId, remittanceDate(sort: Desc)])
+  @@index([createdById, remittanceDate(sort: Desc)])
+  @@map("remittances")
+}
+
+enum RemittanceStatus {
+  PLANNED
+  INITIATED
+  COMPLETED
+  FAILED
+
+  @@map("remittance_status")
+}
+
+// ─────────────────────────────────────────────────────────────
+// MODULE: DEBT MANAGEMENT
+// ─────────────────────────────────────────────────────────────
+
+model Debt {
+  id                String       @id @default(cuid())
+  name              String       // "HSBC Credit Card", "Personal Loan - HDFC"
+  debtType          DebtType
+  creditorName      String?
+  originalAmount    Decimal      @db.Decimal(15, 2)
+  outstandingBalance Decimal     @db.Decimal(15, 2)
+  interestRate      Decimal?     @db.Decimal(5, 2) // APR %
+  minimumPayment    Decimal?     @db.Decimal(15, 2)
+  paymentDueDay     Int?         // Day of month (1-31)
+  currencyCode      String       @default("GBP")
+  startDate         DateTime     @db.Date
+  maturityDate      DateTime?    @db.Date
+  status            DebtStatus   @default(ACTIVE)
+  repaymentStrategy DebtStrategy @default(AVALANCHE)
+  priority          Int          @default(0) // For CUSTOM strategy
+  notes             String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  payments    DebtPayment[]
+  creditCard  CreditCard?
+
+  @@index([status, repaymentStrategy])
+  @@map("debts")
+}
+
+enum DebtType {
+  CREDIT_CARD
+  PERSONAL_LOAN
+  FAMILY_LOAN
+  FRIEND_LOAN
+  INFORMAL
+  MORTGAGE
+  STUDENT_LOAN
+  OTHER
+
+  @@map("debt_type")
+}
+
+enum DebtStatus {
+  ACTIVE
+  PAID_OFF
+  DEFERRED
+  WRITTEN_OFF
+
+  @@map("debt_status")
+}
+
+enum DebtStrategy {
+  SNOWBALL   // Sort by balance ASC (psychological wins)
+  AVALANCHE  // Sort by interest rate DESC (minimum total interest)
+  CUSTOM     // User-defined priority field
+
+  @@map("debt_strategy")
+}
+
+model DebtPayment {
+  id               String   @id @default(cuid())
+  debtId           String
+  paidById         String
+  paymentDate      DateTime @db.Date
+  principalPaid    Decimal  @db.Decimal(15, 2)
+  interestPaid     Decimal  @db.Decimal(15, 2) @default(0)
+  totalPayment     Decimal  @db.Decimal(15, 2)
+  balanceAfter     Decimal  @db.Decimal(15, 2)
+  isMinimumPayment Boolean  @default(false)
+  notes            String?
+  createdAt        DateTime @default(now())
+
+  debt   Debt        @relation(fields: [debtId], references: [id])
+  paidBy UserProfile @relation(fields: [paidById], references: [id])
+
+  @@index([debtId, paymentDate(sort: Desc)])
+  @@map("debt_payments")
+}
+
+// ─────────────────────────────────────────────────────────────
+// MODULE: CREDIT CARDS (extends Debt + Account)
+// ─────────────────────────────────────────────────────────────
+
+model CreditCard {
+  id                  String   @id @default(cuid())
+  debtId              String   @unique
+  accountId           String   @unique
+  cardName            String
+  issuer              String?
+  lastFourDigits      String?  @db.Char(4)
+  creditLimit         Decimal  @db.Decimal(15, 2)
+  billingCycleStartDay Int     // Day of month (1-31)
+  billingCycleEndDay  Int
+  paymentDueDay       Int
+  gracePeriodDays     Int      @default(25)
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  debt       Debt    @relation(fields: [debtId], references: [id])
+  account    Account @relation(fields: [accountId], references: [id])
+  statements CreditCardStatement[]
+
+  @@map("credit_cards")
+}
+
+model CreditCardStatement {
+  id               String   @id @default(cuid())
+  creditCardId     String
+  statementDate    DateTime @db.Date // End of billing cycle
+  openingBalance   Decimal  @db.Decimal(15, 2)
+  totalCharges     Decimal  @db.Decimal(15, 2)
+  totalPayments    Decimal  @db.Decimal(15, 2)
+  closingBalance   Decimal  @db.Decimal(15, 2)
+  minimumDue       Decimal  @db.Decimal(15, 2)
+  isVerified       Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  creditCard CreditCard @relation(fields: [creditCardId], references: [id])
+
+  @@unique([creditCardId, statementDate])
+  @@index([creditCardId, statementDate(sort: Desc)])
+  @@map("credit_card_statements")
+}
+
+// ─────────────────────────────────────────────────────────────
+// MODULE: SAVINGS
+// ─────────────────────────────────────────────────────────────
+
+model SavingsGoal {
+  id              String    @id @default(cuid())
+  accountId       String?   @unique
+  name            String
+  targetAmount    Decimal   @db.Decimal(15, 2)
+  currentAmount   Decimal   @default(0) @db.Decimal(15, 2)
+  targetDate      DateTime? @db.Date
+  priority        Int       @default(0)
+  isActive        Boolean   @default(true)
+  isCompleted     Boolean   @default(false)
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  account       Account?             @relation(fields: [accountId], references: [id])
+  contributions SavingsContribution[]
+
+  @@index([isActive, priority])
+  @@map("savings_goals")
+}
+
+model SavingsContribution {
+  id            String   @id @default(cuid())
+  savingsGoalId String
+  contributedById String
+  amount        Decimal  @db.Decimal(15, 2)
+  contributionDate DateTime @db.Date
+  notes         String?
+  createdAt     DateTime @default(now())
+
+  savingsGoal   SavingsGoal @relation(fields: [savingsGoalId], references: [id])
+  contributedBy UserProfile @relation(fields: [contributedById], references: [id])
+
+  @@index([savingsGoalId, contributionDate(sort: Desc)])
+  @@map("savings_contributions")
+}
+
+// ─────────────────────────────────────────────────────────────
+// MODULE: INVESTMENTS
+// ─────────────────────────────────────────────────────────────
+
+model Investment {
+  id                     String         @id @default(cuid())
+  accountId              String?        @unique
+  name                   String
+  investmentType         InvestmentType
+  currencyCode           String         @default("GBP")
+  totalInvested          Decimal        @db.Decimal(15, 2)
+  currentValue           Decimal        @db.Decimal(15, 2)
+  purchaseDate           DateTime       @db.Date
+  maturityDate           DateTime?      @db.Date
+  annualReturnPercent    Decimal?       @db.Decimal(5, 2)
+  notes                  String?
+  isActive               Boolean        @default(true)
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+
+  account      Account?                @relation(fields: [accountId], references: [id])
+  transactions InvestmentTransaction[]
+
+  @@index([isActive, investmentType])
+  @@map("investments")
+}
+
+enum InvestmentType {
+  STOCKS
+  MUTUAL_FUND
+  INDEX_FUND
+  FIXED_DEPOSIT
+  CHIT_FUND
+  BONDS
+  CRYPTO
+  OTHER
+
+  @@map("investment_type")
+}
+
+model InvestmentTransaction {
+  id              String              @id @default(cuid())
+  investmentId    String
+  executedById    String
+  transactionType InvestmentTxType
+  transactionDate DateTime            @db.Date
+  quantity        Decimal?            @db.Decimal(15, 4)
+  pricePerUnit    Decimal?            @db.Decimal(15, 4)
+  amount          Decimal             @db.Decimal(15, 2)
+  fees            Decimal             @default(0) @db.Decimal(15, 2)
+  notes           String?
+  createdAt       DateTime            @default(now())
+
+  investment  Investment  @relation(fields: [investmentId], references: [id])
+  executedBy  UserProfile @relation(fields: [executedById], references: [id])
+
+  @@index([investmentId, transactionDate(sort: Desc)])
+  @@map("investment_transactions")
+}
+
+enum InvestmentTxType {
+  BUY
+  SELL
+  DIVIDEND
+  INTEREST
+  SPLIT
+  DEPOSIT
+  WITHDRAWAL
+
+  @@map("investment_tx_type")
+}
+
+// ─────────────────────────────────────────────────────────────
+// MODULE: BUDGET CATEGORIES & TRANSACTIONS
+// ─────────────────────────────────────────────────────────────
+
+model BudgetCategory {
+  id               String       @id @default(cuid())
+  name             String
+  categoryType     CategoryType
+  parentCategoryId String?
+  icon             String?
+  color            String?      // Hex color for UI
+  monthlyBudget    Decimal?     @db.Decimal(15, 2)
+  isSystem         Boolean      @default(false) // Cannot be deleted
+  isActive         Boolean      @default(true)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  parent       BudgetCategory?  @relation("CategoryHierarchy", fields: [parentCategoryId], references: [id])
+  children     BudgetCategory[] @relation("CategoryHierarchy")
+  transactions Transaction[]
+
+  @@index([categoryType, isActive])
+  @@map("budget_categories")
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  INVESTMENT
+  DEBT_PAYMENT
+  SAVINGS
+
+  @@map("category_type")
+}
+
+// Transactions are append-only. Never update; soft-correct via reversal.
+model Transaction {
+  id               String          @id @default(cuid())
+  accountId        String
+  categoryId       String
+  createdById      String
+  transactionDate  DateTime        @db.Date
+  transactionType  TransactionType
+  description      String
+  // Multi-currency — every record stores all three
+  originalAmount   Decimal         @db.Decimal(15, 2)
+  originalCurrency String          @default("GBP")
+  exchangeRateId   String?         // Null if no currency conversion needed
+  baseAmountGbp    Decimal         @db.Decimal(15, 2)
+  isReversed       Boolean         @default(false)
+  reversedById     String?         // FK to the reversal Transaction
+  receiptUrl       String?
+  isReconciled     Boolean         @default(false)
+  notes            String?
+  createdAt        DateTime        @default(now())
+
+  account      Account        @relation(fields: [accountId], references: [id])
+  category     BudgetCategory @relation(fields: [categoryId], references: [id])
+  createdBy    UserProfile    @relation(fields: [createdById], references: [id])
+  exchangeRate ExchangeRate?  @relation(fields: [exchangeRateId], references: [id])
+
+  @@index([accountId, transactionDate(sort: Desc)])
+  @@index([categoryId, transactionDate(sort: Desc)])
+  @@index([createdById, transactionDate(sort: Desc)])
+  @@map("transactions")
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  DEBT_PAYMENT
+  SAVINGS_DEPOSIT
+  INVESTMENT_DEPOSIT
+  REMITTANCE
+  REFUND
+
+  @@map("transaction_type")
+}
+
+// ─────────────────────────────────────────────────────────────
+// MODULE: REPORTING — IMMUTABLE MONTHLY SNAPSHOTS
+// Once isLocked = true, no retroactive changes are allowed.
+// ─────────────────────────────────────────────────────────────
+
+model MonthlySnapshot {
+  id                 String           @id @default(cuid())
+  snapshotMonth      DateTime         @db.Date // Always YYYY-MM-01
+  createdById        String
+  verificationStatus SnapshotStatus   @default(DRAFT)
+  isLocked           Boolean          @default(false)
+  lockedAt           DateTime?
+  notes              String?
+  createdAt          DateTime         @default(now())
+
+  createdBy     UserProfile            @relation(fields: [createdById], references: [id])
+  incomeData    SnapshotIncome?
+  expenseData   SnapshotExpense[]
+  debtData      SnapshotDebt[]
+  netWorth      SnapshotNetWorth?
+
+  @@unique([snapshotMonth])
+  @@index([snapshotMonth(sort: Desc), isLocked])
+  @@map("monthly_snapshots")
+}
+
+enum SnapshotStatus {
+  DRAFT
+  VERIFIED
+  APPROVED
+
+  @@map("snapshot_status")
+}
+
+model SnapshotIncome {
+  id              String   @id @default(cuid())
+  snapshotId      String   @unique
+  totalGbp        Decimal  @db.Decimal(15, 2)
+  salaryGbp       Decimal  @db.Decimal(15, 2)
+  otherIncomeGbp  Decimal  @db.Decimal(15, 2)
+  remittancesGbp  Decimal  @db.Decimal(15, 2)
+  fixedExpensesGbp Decimal @db.Decimal(15, 2)
+  remainingCashGbp Decimal @db.Decimal(15, 2)
+  createdAt       DateTime @default(now())
+
+  snapshot MonthlySnapshot @relation(fields: [snapshotId], references: [id])
+
+  @@map("snapshot_income")
+}
+
+model SnapshotExpense {
+  id              String   @id @default(cuid())
+  snapshotId      String
+  categoryId      String
+  categoryName    String   // Denormalized snapshot of name at that time
+  totalGbp        Decimal  @db.Decimal(15, 2)
+  budgetGbp       Decimal? @db.Decimal(15, 2)
+  transactionCount Int     @default(0)
+  createdAt       DateTime @default(now())
+
+  snapshot MonthlySnapshot @relation(fields: [snapshotId], references: [id])
+
+  @@index([snapshotId])
+  @@map("snapshot_expenses")
+}
+
+model SnapshotDebt {
+  id                 String   @id @default(cuid())
+  snapshotId         String
+  debtId             String
+  debtName           String   // Denormalized snapshot
+  debtType           DebtType
+  outstandingBalance Decimal  @db.Decimal(15, 2)
+  interestRate       Decimal? @db.Decimal(5, 2)
+  monthsPaid         Int      @default(0)
+  estimatedPayoffMonths Int?
+  createdAt          DateTime @default(now())
+
+  snapshot MonthlySnapshot @relation(fields: [snapshotId], references: [id])
+
+  @@index([snapshotId])
+  @@map("snapshot_debts")
+}
+
+model SnapshotNetWorth {
+  id              String   @id @default(cuid())
+  snapshotId      String   @unique
+  totalAssetsGbp  Decimal  @db.Decimal(15, 2)
+  totalLiabilitiesGbp Decimal @db.Decimal(15, 2)
+  netWorthGbp     Decimal  @db.Decimal(15, 2)
+  // Month-over-month delta (null for first snapshot)
+  priorMonthNetWorthGbp Decimal? @db.Decimal(15, 2)
+  deltaGbp        Decimal? @db.Decimal(15, 2)
+  createdAt       DateTime @default(now())
+
+  snapshot MonthlySnapshot @relation(fields: [snapshotId], references: [id])
+
+  @@map("snapshot_net_worth")
+}

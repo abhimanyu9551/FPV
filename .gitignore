@@ -1,0 +1,41 @@
+# ── Node ───────────────────────────────────────────────────
+node_modules/
+.pnpm-store/
+.turbo/
+
+# ── Next.js ────────────────────────────────────────────────
+apps/dashboard/.next/
+apps/dashboard/out/
+apps/dashboard/dist/
+
+# ── Python / Bot ───────────────────────────────────────────
+apps/telegram-bot/.venv/
+**/__pycache__/
+*.pyc
+*.pyo
+apps/telegram-bot/bot.log
+apps/telegram-bot/bot.err
+
+# ── Prisma generated ───────────────────────────────────────
+packages/database/node_modules/
+
+# ── Env files (NEVER commit secrets) ──────────────────────
+.env
+.env.local
+.env.*.local
+apps/telegram-bot/.env
+!.env.example
+!.env.local.example
+!apps/telegram-bot/.env.example
+
+# ── Test artifacts ─────────────────────────────────────────
+coverage/
+test-results/
+playwright-report/
+
+# ── OS / IDE ───────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

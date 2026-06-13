@@ -1,0 +1,14 @@
+# Normalize line endings to LF in the repo, check out as-is on Windows
+* text=auto eol=lf
+
+# Force LF for shell scripts (husky hooks must be LF)
+*.sh text eol=lf
+.husky/* text eol=lf
+
+# Binary files
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary
+*.ttf binary
+pnpm-lock.yaml -diff

@@ -1,0 +1,44 @@
+#!/usr/bin/env sh
+# FPV pre-push hook — runs before every `git push`
+# Skip with: git push --no-verify
+
+ROOT="$(git rev-parse --show-toplevel)"
+DASHBOARD="$ROOT/apps/dashboard"
+
+echo ""
+echo "┌─────────────────────────────────────────────┐"
+echo "│  FPV pre-push checks                        │"
+echo "└─────────────────────────────────────────────┘"
+
+# ── 1. TypeScript check ──────────────────────────────────────
+echo ""
+echo "⌛ [1/2] TypeScript check..."
+cd "$ROOT" && pnpm typecheck 2>&1
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ TypeScript errors — fix them before pushing."
+  echo "   Run: pnpm typecheck"
+  exit 1
+fi
+echo "✓  TypeScript OK"
+
+# ── 2. Integration tests (only if dev server is running) ─────
+echo ""
+echo "⌛ [2/2] Checking for running dev server..."
+if curl -sf http://localhost:3000 > /dev/null 2>&1; then
+  echo "   Dev server detected on :3000 — running route tests..."
+  cd "$DASHBOARD" && npx tsx scripts/test-all-routes.ts 2>&1
+  if [ $? -ne 0 ]; then
+    echo ""
+    echo "❌ Route tests failed — fix them before pushing."
+    exit 1
+  fi
+  echo "✓  Route tests OK"
+else
+  echo "   ⚠  Dev server not running — skipping integration tests."
+  echo "   Tip: Start it with 'pnpm dev' before pushing to run locally."
+fi
+
+echo ""
+echo "✅ All checks passed — pushing..."
+echo ""
