@@ -3,12 +3,24 @@
  * Tests every UI page and API endpoint with a real authenticated session.
  * Run: npx tsx scripts/test-all-routes.ts  (from apps/dashboard)
  */
-import { config } from 'dotenv'
+import { readFileSync, existsSync } from 'fs'
 import { resolve } from 'path'
 
 // Load .env then .env.local (Next.js convention — .env.local overrides .env)
-config({ path: resolve(process.cwd(), '.env') })
-config({ path: resolve(process.cwd(), '.env.local'), override: true })
+function loadEnvFile(filePath: string) {
+  if (!existsSync(filePath)) return
+  for (const line of readFileSync(filePath, 'utf8').split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const eq = trimmed.indexOf('=')
+    if (eq === -1) continue
+    const key = trimmed.slice(0, eq).trim()
+    const val = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '')
+    if (!process.env[key]) process.env[key] = val
+  }
+}
+loadEnvFile(resolve(process.cwd(), '.env'))
+loadEnvFile(resolve(process.cwd(), '.env.local'))
 
 const BASE          = 'http://localhost:3000'
 const SUPABASE_URL  = process.env.NEXT_PUBLIC_SUPABASE_URL!
