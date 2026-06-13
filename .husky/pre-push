@@ -27,7 +27,7 @@ echo ""
 echo "⌛ [2/2] Checking for running dev server..."
 if curl -sf http://localhost:3000 > /dev/null 2>&1; then
   echo "   Dev server detected on :3000 — running route tests..."
-  cd "$DASHBOARD" && npx tsx scripts/test-all-routes.ts 2>&1
+  cd "$DASHBOARD" && pnpm exec tsx scripts/test-all-routes.ts 2>&1
   if [ $? -ne 0 ]; then
     echo ""
     echo "❌ Route tests failed — fix them before pushing."
@@ -36,7 +36,7 @@ if curl -sf http://localhost:3000 > /dev/null 2>&1; then
   echo "✓  Route tests OK"
 else
   echo "   ⚠  Dev server not running — skipping integration tests."
-  echo "   Tip: Start it with 'pnpm dev' before pushing to run locally."
+  echo "   Tip: Start with 'pnpm dev' before pushing to run them locally."
 fi
 
 echo ""
