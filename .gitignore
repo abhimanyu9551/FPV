@@ -39,3 +39,4 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+apps/dashboard/scripts/.test-session.json
