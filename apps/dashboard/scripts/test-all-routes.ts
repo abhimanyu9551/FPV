@@ -57,6 +57,8 @@ function buildCookieHeader(session: object): string {
 
 type Result = { route: string; method: string; status: number; ok: boolean; note?: string }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
 async function hit(
   method: string,
   path: string,
@@ -64,6 +66,8 @@ async function hit(
   body?: unknown,
   expectedStatus = 200,
 ): Promise<Result> {
+  // Small delay so the dev server isn't hammered by rapid sequential requests
+  await sleep(150)
   const opts: RequestInit = {
     method,
     headers: { Cookie: cookieHeader, 'Content-Type': 'application/json' },
