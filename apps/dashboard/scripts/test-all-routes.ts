@@ -3,7 +3,12 @@
  * Tests every UI page and API endpoint with a real authenticated session.
  * Run: npx tsx scripts/test-all-routes.ts  (from apps/dashboard)
  */
-import 'dotenv/config'
+import { config } from 'dotenv'
+import { resolve } from 'path'
+
+// Load .env then .env.local (Next.js convention — .env.local overrides .env)
+config({ path: resolve(process.cwd(), '.env') })
+config({ path: resolve(process.cwd(), '.env.local'), override: true })
 
 const BASE          = 'http://localhost:3000'
 const SUPABASE_URL  = process.env.NEXT_PUBLIC_SUPABASE_URL!
