@@ -1,6 +1,7 @@
 import { getCurrentUserProfile } from '@/lib/auth'
 import { debtService } from '@/lib/services/debt.service'
 import { debtsDAL } from '@/lib/dal/debts.dal'
+import { exchangeRatesDAL } from '@/lib/dal/exchange-rates.dal'
 import DebtsPageClient from './_components/DebtsPageClient'
 
 export interface DebtSummary {
@@ -17,6 +18,7 @@ export interface DebtSummary {
   monthsToPayoff: number
   estimatedPayoffDate: string
   priorityOrder: number
+  savingsAllocationPercent: number | null
 }
 
 export interface CurrencyGroup {
@@ -51,11 +53,14 @@ export default async function DebtsPage({
   const from = sp.from ? new Date(sp.from) : fromDate
   const to = sp.to ? new Date(sp.to) : toDate
 
-  const [debts, plan, payments] = await Promise.all([
+  const [debts, plan, payments, gbpInrRate] = await Promise.all([
     debtsDAL.listActive(),
     debtService.buildPlan(),
     debtsDAL.listPaymentsInRange(from, to),
+    exchangeRatesDAL.findLatest('GBP', 'INR'),
   ])
+
+  const inrRate = gbpInrRate ? Number(gbpInrRate.rate) : null
 
   const planMap = new Map(plan.debts.map((p) => [p.debtId, p]))
 
@@ -78,6 +83,7 @@ export default async function DebtsPage({
       monthsToPayoff: planItem?.monthsToPayoff ?? 0,
       estimatedPayoffDate: planItem?.estimatedPayoffDate ?? '—',
       priorityOrder: planItem?.priorityOrder ?? 0,
+      savingsAllocationPercent: d.savingsAllocationPercent ? Number(d.savingsAllocationPercent) : null,
     }
   })
 
@@ -136,6 +142,8 @@ export default async function DebtsPage({
         from: from.toISOString().slice(0, 10),
         to: to.toISOString().slice(0, 10),
       }}
+      allDebts={debtSummaries}
+      inrRate={inrRate}
     />
   )
 }

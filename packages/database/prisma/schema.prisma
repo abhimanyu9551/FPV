@@ -171,13 +171,15 @@ model IncomeSource {
   frequency        PayFrequency    @default(MONTHLY)
   expectedAmount   Decimal?        @db.Decimal(15, 2) // Typical monthly amount
   currencyCode     String          @default("GBP")
+  salaryDay        Int?            // Day of month salary arrives (1-31)
   isActive         Boolean         @default(true)
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 
-  user             UserProfile      @relation(fields: [userId], references: [id])
+  user             UserProfile                @relation(fields: [userId], references: [id])
   allocationRules  AllocationRule[]
   incomeEntries    IncomeEntry[]
+  sharedRuleSplits SharedAllocationRuleSplit[]
 
   @@index([userId, isActive])
   @@map("income_sources")
@@ -374,6 +376,7 @@ model Debt {
   status            DebtStatus   @default(ACTIVE)
   repaymentStrategy DebtStrategy @default(AVALANCHE)
   priority          Int          @default(0) // For CUSTOM strategy
+  savingsAllocationPercent Decimal? @db.Decimal(5, 2) // % of monthly savings routed to this debt
   notes             String?
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
@@ -773,4 +776,57 @@ model SnapshotNetWorth {
   snapshot MonthlySnapshot @relation(fields: [snapshotId], references: [id])
 
   @@map("snapshot_net_worth")
+}
+
+// ─────────────────────────────────────────────────────────────
+// MODULE: SHARED SALARY ALLOCATION (CROSS-SOURCE RULES)
+// Rules that split an expense across multiple income sources.
+// ─────────────────────────────────────────────────────────────
+
+enum SharedRuleCategory {
+  CREDIT_CARD_PAYMENT
+  EMI
+  RENT
+  GROCERIES
+  LEISURE
+  INVESTMENT
+  SAVINGS
+  GENERAL_EXPENSE
+  OTHER
+
+  @@map("shared_rule_category")
+}
+
+model SharedAllocationRule {
+  id                String             @id @default(cuid())
+  allocationOrder   Int                // Lower = higher priority
+  label             String
+  category          SharedRuleCategory @default(OTHER)
+  targetType        AllocationTarget   @default(BUDGET_CATEGORY)
+  targetId          String?
+  allocationType    AllocationType
+  allocationValue   Decimal?           @db.Decimal(15, 2) // For FIXED_AMOUNT
+  allocationPercent Decimal?           @db.Decimal(5, 2)  // For PERCENTAGE of combined income
+  isEnabled         Boolean            @default(true)
+  notes             String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  splits SharedAllocationRuleSplit[]
+
+  @@index([allocationOrder])
+  @@map("shared_allocation_rules")
+}
+
+model SharedAllocationRuleSplit {
+  id                  String  @id @default(cuid())
+  ruleId              String
+  incomeSourceId      String
+  contributionPercent Decimal @db.Decimal(5, 2) // % of this rule's total paid by this source
+
+  rule         SharedAllocationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  incomeSource IncomeSource         @relation(fields: [incomeSourceId], references: [id])
+
+  @@unique([ruleId, incomeSourceId])
+  @@map("shared_allocation_rule_splits")
 }

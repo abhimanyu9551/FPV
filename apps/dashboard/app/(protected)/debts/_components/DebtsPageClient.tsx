@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, Cell
+  ResponsiveContainer, Cell, PieChart, Pie,
 } from 'recharts'
 import type { CurrencyGroup, MonthlyPaymentTotal, DebtSummary } from '../page'
 
@@ -222,6 +222,182 @@ function PaymentHistoryChart({ data }: { data: MonthlyPaymentTotal[] }) {
   )
 }
 
+// ─── Savings Allocation Section ──────────────────────────────────────────────
+
+const PIE_COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316']
+
+interface SavingsAllocationSectionProps {
+  allDebts: DebtSummary[]
+  inrRate: number | null
+}
+
+function SavingsAllocationSection({ allDebts, inrRate }: SavingsAllocationSectionProps) {
+  const [debts, setDebts] = useState(allDebts)
+  const [editing, setEditing] = useState<string | null>(null)
+  const [pctInput, setPctInput] = useState(0)
+  const [saving, setSaving] = useState(false)
+
+  const allocated = debts.filter((d) => (d.savingsAllocationPercent ?? 0) > 0)
+  const totalPct = allocated.reduce((s, d) => s + (d.savingsAllocationPercent ?? 0), 0)
+  const unallocatedPct = Math.max(0, 100 - totalPct)
+
+  const pieData = [
+    ...allocated.map((d, i) => ({
+      name: d.name,
+      value: d.savingsAllocationPercent!,
+      fill: PIE_COLORS[i % PIE_COLORS.length],
+    })),
+    ...(unallocatedPct > 0 ? [{ name: 'Unallocated', value: unallocatedPct, fill: '#374151' }] : []),
+  ]
+
+  async function savePct(debtId: string, pct: number) {
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/v1/debts/${debtId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ savingsAllocationPercent: pct }),
+      })
+      if (res.ok) {
+        setDebts((prev) => prev.map((d) => d.id === debtId ? { ...d, savingsAllocationPercent: pct || null } : d))
+        setEditing(null)
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const PieCustomLabel = ({ cx, cy, midAngle, outerRadius, name, value }: {
+    cx: number; cy: number; midAngle: number; outerRadius: number; name: string; value: number
+  }) => {
+    if (value < 5) return null
+    const RADIAN = Math.PI / 180
+    const r = outerRadius + 24
+    const x = cx + r * Math.cos(-midAngle * RADIAN)
+    const y = cy + r * Math.sin(-midAngle * RADIAN)
+    return (
+      <text x={x} y={y} fill="#d1d5db" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize={11}>
+        {name.length > 12 ? name.slice(0, 11) + '…' : name} {value}%
+      </text>
+    )
+  }
+
+  return (
+    <section className="bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-white font-semibold">Savings Allocation</h2>
+          <p className="text-gray-500 text-xs mt-0.5">
+            Set what % of monthly savings goes to each debt
+          </p>
+        </div>
+        <span className={`text-xs font-medium px-2 py-1 rounded-md ${
+          totalPct > 100 ? 'bg-red-900/40 text-red-300' :
+          totalPct === 100 ? 'bg-emerald-900/40 text-emerald-300' :
+          'bg-gray-800 text-gray-400'
+        }`}>
+          {totalPct}% allocated
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Pie chart */}
+        <div>
+          {allocated.length > 0 ? (
+            <PieChart width={280} height={220}>
+              <Pie
+                data={pieData}
+                cx={130}
+                cy={110}
+                innerRadius={55}
+                outerRadius={90}
+                paddingAngle={2}
+                dataKey="value"
+                labelLine={false}
+                label={PieCustomLabel as unknown as boolean}
+              >
+                {pieData.map((entry, i) => (
+                  <Cell key={i} fill={entry.fill} />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{ background: '#1f2937', border: '1px solid #374151', borderRadius: 8, fontSize: 12 }}
+                formatter={(v: number, name: string) => [`${v}%`, name]}
+              />
+            </PieChart>
+          ) : (
+            <div className="flex items-center justify-center h-40 text-gray-600 text-sm">
+              No savings allocated yet
+            </div>
+          )}
+        </div>
+
+        {/* Debt list with % editors */}
+        <div className="space-y-2">
+          {debts.map((d) => {
+            const pct = d.savingsAllocationPercent ?? 0
+            const isEditing = editing === d.id
+            const symbol = d.currencyCode === 'INR' ? '₹' : '£'
+            return (
+              <div key={d.id} className="bg-gray-800/60 rounded-xl px-4 py-3 space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-white text-sm font-medium truncate">{d.name}</p>
+                    <p className="text-gray-500 text-xs">
+                      {symbol}{d.outstandingBalance.toLocaleString()}
+                      {d.currencyCode === 'GBP' && inrRate
+                        ? ` · ₹${Math.round(d.outstandingBalance * inrRate).toLocaleString('en-IN')}`
+                        : ''}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {isEditing ? (
+                      <>
+                        <input
+                          type="number" min={0} max={100} step={1}
+                          value={pctInput}
+                          onChange={(e) => setPctInput(Number(e.target.value))}
+                          className="w-16 px-2 py-1 bg-gray-700 border border-gray-600 rounded text-white text-sm text-right focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                        <span className="text-gray-500 text-xs">%</span>
+                        <button
+                          onClick={() => savePct(d.id, pctInput)}
+                          disabled={saving}
+                          className="text-xs px-2 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-md transition"
+                        >
+                          {saving ? '…' : '✓'}
+                        </button>
+                        <button
+                          onClick={() => setEditing(null)}
+                          className="text-xs px-2 py-1 bg-gray-700 text-gray-300 rounded-md transition"
+                        >
+                          ✕
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <span className={`text-sm font-semibold ${pct > 0 ? 'text-indigo-400' : 'text-gray-600'}`}>
+                          {pct > 0 ? `${pct}%` : '—'}
+                        </span>
+                        <button
+                          onClick={() => { setEditing(d.id); setPctInput(pct) }}
+                          className="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-md transition"
+                        >
+                          Set
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 // ─── main component ──────────────────────────────────────────────────────────
 
 interface Props {
@@ -236,9 +412,11 @@ interface Props {
   }
   paymentHistory: MonthlyPaymentTotal[]
   dateRange: { from: string; to: string }
+  allDebts: DebtSummary[]
+  inrRate: number | null
 }
 
-export default function DebtsPageClient({ gbpGroup, inrGroup, otherGroups, planSummary, paymentHistory, dateRange }: Props) {
+export default function DebtsPageClient({ gbpGroup, inrGroup, otherGroups, planSummary, paymentHistory, dateRange, allDebts, inrRate }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [from, setFrom] = useState(dateRange.from)
@@ -400,6 +578,9 @@ export default function DebtsPageClient({ gbpGroup, inrGroup, otherGroups, planS
           {allGroups.map((group) => (
             <CurrencySection key={group.currency} group={group} />
           ))}
+
+          {/* ── Savings Allocation ── */}
+          <SavingsAllocationSection allDebts={allDebts} inrRate={inrRate} />
         </>
       ) : (
         <div className="bg-gray-900 border border-gray-800 border-dashed rounded-xl px-6 py-16 text-center">

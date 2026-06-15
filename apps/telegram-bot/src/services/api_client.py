@@ -66,6 +66,35 @@ async def get_remittance_categories() -> list:
         return r.json()
 
 
+async def get_monthly_status(year: int, month: int) -> dict:
+    async with httpx.AsyncClient(timeout=45) as client:
+        r = await client.get(
+            f"{BASE}/api/v1/salary/monthly-status",
+            params={"year": year, "month": month},
+            headers=HEADERS,
+        )
+        r.raise_for_status()
+        return r.json()
+
+
+async def process_month(year: int, month: int) -> dict:
+    async with httpx.AsyncClient(timeout=45) as client:
+        r = await client.post(
+            f"{BASE}/api/v1/salary/process-month",
+            json={"year": year, "month": month},
+            headers=HEADERS,
+        )
+        r.raise_for_status()
+        return r.json()
+
+
+async def list_shared_rules() -> list:
+    async with httpx.AsyncClient(timeout=10) as client:
+        r = await client.get(f"{BASE}/api/v1/salary/shared-rules", headers=HEADERS)
+        r.raise_for_status()
+        return r.json()
+
+
 def _today() -> str:
     from datetime import date
     return date.today().isoformat()

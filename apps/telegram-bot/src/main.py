@@ -10,6 +10,7 @@ from src.handlers.start import start
 from src.handlers.status import status
 from src.handlers.debt import debt_plan
 from src.handlers.income import add_income
+from src.handlers.process import process_month
 from src.handlers.help import help_command
 from src.handlers.errors import error_handler
 
@@ -32,6 +33,7 @@ def build_app() -> Application:
     )
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("status", status))
+    app.add_handler(CommandHandler("process", process_month))
     app.add_handler(CommandHandler("debt_plan", debt_plan))
     app.add_handler(CommandHandler("add_income", add_income))
     app.add_handler(CommandHandler("help", help_command))

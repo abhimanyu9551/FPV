@@ -5,15 +5,22 @@ from src.utils.decorators import require_auth
 HELP_TEXT = (
     "<b>FPV Finance Bot — Commands</b>\n"
     "\n"
-    "/start — Welcome + status overview\n"
-    "/status — Current financial snapshot\n"
-    "/debt_plan — Debt repayment plan (AVALANCHE)\n"
-    "/debt_plan SNOWBALL — Snowball strategy\n"
+    "📊 <b>Monthly Flow</b>\n"
+    "/status — Full monthly status: income, allocations, savings, debts\n"
+    "/process — Run salary allocation for this month\n"
+    "/process 2026 5 — Run allocation for a specific month\n"
+    "\n"
+    "💰 <b>Income</b>\n"
     "/add_income 3000 GBP — Record salary income\n"
-    "/add_income 250000 INR 107.5 — Record INR income with rate\n"
+    "/add_income 250000 INR 107.5 — Record INR income with exchange rate\n"
+    "\n"
+    "💳 <b>Debts</b>\n"
+    "/debt_plan — Debt repayment plan (AVALANCHE strategy)\n"
+    "/debt_plan SNOWBALL — Snowball strategy\n"
+    "\n"
     "/help — This message\n"
     "\n"
-    "<i>All commands require authorisation. Data is read/written via the FPV Dashboard API.</i>"
+    "<i>All commands require authorisation. Set allocation rules in the dashboard.</i>"
 )
 
 

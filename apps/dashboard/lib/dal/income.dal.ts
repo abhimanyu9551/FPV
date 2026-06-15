@@ -1,4 +1,4 @@
-import { Prisma, AllocationType, AllocationTarget } from '@prisma/client'
+import { Prisma, AllocationType, AllocationTarget, SharedRuleCategory } from '@prisma/client'
 import { db } from '@/lib/db'
 import type { CreateIncomeEntryInput } from '@/lib/validators/income.schema'
 
@@ -90,6 +90,88 @@ export const incomeDAL = {
 
   async deleteAllocationRule(id: string) {
     return db.allocationRule.delete({ where: { id } })
+  },
+
+  // ── Shared Allocation Rules ──────────────────────────────────
+
+  async listSharedRules() {
+    return db.sharedAllocationRule.findMany({
+      orderBy: { allocationOrder: 'asc' },
+      include: { splits: { include: { incomeSource: true } } },
+    })
+  },
+
+  async findSharedRule(id: string) {
+    return db.sharedAllocationRule.findUnique({
+      where: { id },
+      include: { splits: { include: { incomeSource: true } } },
+    })
+  },
+
+  async createSharedRule(data: {
+    allocationOrder: number
+    label: string
+    category: SharedRuleCategory
+    targetType?: AllocationTarget
+    targetId?: string | null
+    allocationType: AllocationType
+    allocationValue?: number | null
+    allocationPercent?: number | null
+    isEnabled?: boolean
+    notes?: string | null
+    splits: Array<{ incomeSourceId: string; contributionPercent: number }>
+  }) {
+    const { splits, ...rest } = data
+    return db.sharedAllocationRule.create({
+      data: {
+        ...rest,
+        splits: {
+          create: splits,
+        },
+      },
+      include: { splits: { include: { incomeSource: true } } },
+    })
+  },
+
+  async updateSharedRule(id: string, data: {
+    allocationOrder?: number
+    label?: string
+    category?: SharedRuleCategory
+    allocationType?: AllocationType
+    allocationValue?: number | null
+    allocationPercent?: number | null
+    isEnabled?: boolean
+    notes?: string | null
+    splits?: Array<{ incomeSourceId: string; contributionPercent: number }>
+  }) {
+    const { splits, ...rest } = data
+    if (splits !== undefined) {
+      // Replace all splits
+      await db.sharedAllocationRuleSplit.deleteMany({ where: { ruleId: id } })
+      await db.sharedAllocationRuleSplit.createMany({
+        data: splits.map((s) => ({ ...s, ruleId: id })),
+      })
+    }
+    return db.sharedAllocationRule.update({
+      where: { id },
+      data: rest,
+      include: { splits: { include: { incomeSource: true } } },
+    })
+  },
+
+  async deleteSharedRule(id: string) {
+    return db.sharedAllocationRule.delete({ where: { id } })
+  },
+
+  // ── Income entries for a month ───────────────────────────────
+
+  async listEntriesForMonth(userId: string, year: number, month: number) {
+    const from = new Date(year, month - 1, 1)
+    const to = new Date(year, month, 0, 23, 59, 59)
+    return db.incomeEntry.findMany({
+      where: { userId, receivedDate: { gte: from, lte: to } },
+      include: { incomeSource: true },
+    })
   },
 
   async createAllocationLedger(data: {
