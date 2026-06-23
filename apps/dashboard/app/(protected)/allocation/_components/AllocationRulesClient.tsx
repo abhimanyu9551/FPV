@@ -113,24 +113,24 @@ export default function AllocationRulesClient({ source }: { source: Source }) {
   const hasRemaining = rules.some((r) => r.allocationType === 'REMAINING' && r.isEnabled)
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-4">
+    <div className="rounded-xl border border-border bg-card shadow-[var(--card-shadow)] p-5 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-white font-semibold">{source.name}</h2>
-          <p className="text-gray-500 text-xs mt-0.5">
+          <h2 className="text-foreground font-semibold">{source.name}</h2>
+          <p className="text-muted-foreground text-xs mt-0.5">
             {source.currencyCode} · {rules.length} rule{rules.length !== 1 ? 's' : ''}
           </p>
         </div>
         <button
           onClick={() => setAdding(!adding)}
-          className="text-sm px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition"
+          className="text-sm px-3 py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg transition"
         >
           + Add Rule
         </button>
       </div>
 
       {rules.length === 0 && !adding ? (
-        <p className="text-gray-600 text-sm text-center py-4">
+        <p className="text-muted-foreground text-sm text-center py-4">
           No allocation rules yet. Add your first rule to start auto-allocating salary.
         </p>
       ) : (
@@ -140,15 +140,15 @@ export default function AllocationRulesClient({ source }: { source: Source }) {
               key={rule.id}
               className={`flex items-center justify-between px-4 py-3 rounded-xl border ${
                 rule.isEnabled
-                  ? 'bg-gray-800/60 border-gray-700'
-                  : 'bg-gray-800/20 border-gray-800 opacity-50'
+                  ? 'bg-muted/60 border-border'
+                  : 'bg-muted/20 border-border opacity-50'
               }`}
             >
               <div className="flex items-center gap-3">
-                <span className="text-gray-600 text-xs w-5 text-right font-mono">{i + 1}</span>
+                <span className="text-muted-foreground/60 text-xs w-5 text-right font-mono">{i + 1}</span>
                 <div>
-                  <p className="text-white text-sm font-medium">{rule.label}</p>
-                  <p className="text-gray-500 text-xs">
+                  <p className="text-foreground text-sm font-medium">{rule.label}</p>
+                  <p className="text-muted-foreground text-xs">
                     {TYPE_LABELS[rule.allocationType]} · {formatRule(rule)}
                   </p>
                 </div>
@@ -158,15 +158,15 @@ export default function AllocationRulesClient({ source }: { source: Source }) {
                   onClick={() => handleToggle(rule)}
                   className={`text-xs px-2 py-1 rounded-md transition ${
                     rule.isEnabled
-                      ? 'text-emerald-400 bg-emerald-900/30 hover:bg-emerald-900/50'
-                      : 'text-gray-500 bg-gray-800 hover:bg-gray-700'
+                      ? 'text-success bg-success/20 hover:bg-success/30'
+                      : 'text-muted-foreground bg-muted hover:bg-accent'
                   }`}
                 >
                   {rule.isEnabled ? 'On' : 'Off'}
                 </button>
                 <button
                   onClick={() => handleDelete(rule.id)}
-                  className="text-xs text-red-500 hover:text-red-400 transition px-2 py-1"
+                  className="text-xs text-destructive hover:text-destructive/80 transition px-2 py-1"
                 >
                   ✕
                 </button>
@@ -179,30 +179,30 @@ export default function AllocationRulesClient({ source }: { source: Source }) {
       {adding && (
         <form
           onSubmit={handleAdd}
-          className="border border-indigo-800 bg-indigo-950/20 rounded-xl p-4 space-y-3 mt-2"
+          className="border border-primary/30 bg-primary/5 rounded-xl p-4 space-y-3 mt-2"
         >
-          <p className="text-indigo-300 text-sm font-medium">New allocation rule</p>
-          {error && <p className="text-red-400 text-xs">{error}</p>}
+          <p className="text-primary text-sm font-medium">New allocation rule</p>
+          {error && <p className="text-destructive text-xs">{error}</p>}
 
           <div className="grid grid-cols-2 gap-3">
             {/* Label */}
             <div className="col-span-2">
-              <label className="block text-xs text-gray-400 mb-1">Label</label>
+              <label className="block text-xs text-muted-foreground mb-1">Label</label>
               <input
                 name="label"
                 required
                 placeholder="e.g. Rent, Savings, Dad Support"
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-foreground text-sm placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
 
             {/* Category */}
             <div className="col-span-2">
-              <label className="block text-xs text-gray-400 mb-1">Category</label>
+              <label className="block text-xs text-muted-foreground mb-1">Category</label>
               <select
                 name="targetType"
                 defaultValue="BUDGET_CATEGORY"
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 {TARGET_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -212,11 +212,11 @@ export default function AllocationRulesClient({ source }: { source: Source }) {
 
             {/* Allocation type */}
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Allocation Type</label>
+              <label className="block text-xs text-muted-foreground mb-1">Allocation Type</label>
               <select
                 value={allocType}
                 onChange={(e) => setAllocType(e.target.value as typeof allocType)}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value="FIXED_AMOUNT">Fixed amount (£)</option>
                 <option value="PERCENTAGE">Percentage (%)</option>
@@ -229,7 +229,7 @@ export default function AllocationRulesClient({ source }: { source: Source }) {
             {/* Amount input */}
             {allocType === 'FIXED_AMOUNT' && (
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Amount (£)</label>
+                <label className="block text-xs text-muted-foreground mb-1">Amount (£)</label>
                 <input
                   name="allocationValue"
                   type="number"
@@ -237,13 +237,13 @@ export default function AllocationRulesClient({ source }: { source: Source }) {
                   step="0.01"
                   required
                   placeholder="775.00"
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-foreground text-sm placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                 />
               </div>
             )}
             {allocType === 'PERCENTAGE' && (
               <div>
-                <label className="block text-xs text-gray-400 mb-1">Percentage (%)</label>
+                <label className="block text-xs text-muted-foreground mb-1">Percentage (%)</label>
                 <input
                   name="allocationPercent"
                   type="number"
@@ -252,13 +252,13 @@ export default function AllocationRulesClient({ source }: { source: Source }) {
                   step="0.01"
                   required
                   placeholder="10"
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-foreground text-sm placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                 />
               </div>
             )}
             {allocType === 'REMAINING' && (
               <div className="flex items-end pb-2">
-                <p className="text-gray-500 text-xs">
+                <p className="text-muted-foreground text-xs">
                   Gets whatever is left after all fixed &amp; percentage rules run.
                 </p>
               </div>
@@ -269,14 +269,14 @@ export default function AllocationRulesClient({ source }: { source: Source }) {
             <button
               type="submit"
               disabled={saving}
-              className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white text-sm font-medium rounded-lg transition"
+              className="px-4 py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-foreground text-sm font-medium rounded-lg transition"
             >
               {saving ? 'Adding…' : 'Add Rule'}
             </button>
             <button
               type="button"
               onClick={() => { setAdding(false); setError('') }}
-              className="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition"
+              className="px-4 py-1.5 bg-muted hover:bg-accent text-foreground/80 text-sm rounded-lg transition"
             >
               Cancel
             </button>

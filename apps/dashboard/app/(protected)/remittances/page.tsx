@@ -1,6 +1,13 @@
 import { getCurrentUserProfile } from '@/lib/auth'
 import { remittancesDAL } from '@/lib/dal/remittances.dal'
 import { CurrencyService } from '@/lib/services/currency.service'
+import { PageHeader } from '@/components/shared/PageHeader'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { ArrowRightLeft } from 'lucide-react'
+import Link from 'next/link'
 
 export default async function RemittancesPage() {
   await getCurrentUserProfile()
@@ -15,49 +22,49 @@ export default async function RemittancesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">India Transfers</h1>
-          <p className="text-gray-400 text-sm mt-1">GBP → INR remittances</p>
-        </div>
-        <a href="/remittances/new" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition">
-          + New Transfer
-        </a>
-      </div>
+      <PageHeader title="India Transfers" description="GBP → INR remittances">
+        <Button asChild>
+          <Link href="/remittances/new">+ New Transfer</Link>
+        </Button>
+      </PageHeader>
 
-      {/* Categories */}
       <section>
-        <h2 className="text-lg font-semibold text-white mb-3">Categories</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-3">Categories</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {categories.map((cat) => (
-            <div key={cat.id} className="bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-center">
-              <p className="text-white text-sm font-medium">{cat.name}</p>
+            <Card key={cat.id} className="items-center gap-1 px-4 py-3 text-center">
+              <p className="text-foreground text-sm font-medium">{cat.name}</p>
               {cat.monthlyBudget && (
-                <p className="text-indigo-400 text-xs mt-1">{CurrencyService.format(Number(cat.monthlyBudget), 'GBP')}</p>
+                <p className="text-primary text-xs">{CurrencyService.format(Number(cat.monthlyBudget), 'GBP')}</p>
               )}
-              <p className="text-gray-600 text-xs mt-0.5">Priority {cat.priority}</p>
-            </div>
+              <p className="text-muted-foreground/60 text-xs">Priority {cat.priority}</p>
+            </Card>
           ))}
         </div>
       </section>
 
-      {/* Transfer History */}
       <section>
         <div className="flex justify-between items-center mb-3">
-          <h2 className="text-lg font-semibold text-white">Transfer History</h2>
-          <span className="text-sm text-gray-400">Total completed: {CurrencyService.format(totalGbp, 'GBP')}</span>
+          <h2 className="text-lg font-semibold text-foreground">Transfer History</h2>
+          <span className="text-sm text-muted-foreground tabular-nums">
+            Total completed: {CurrencyService.format(totalGbp, 'GBP')}
+          </span>
         </div>
         {remittances.length === 0 ? (
-          <div className="bg-gray-900 border border-gray-800 border-dashed rounded-xl px-6 py-10 text-center">
-            <p className="text-gray-400">No remittances yet.</p>
-          </div>
+          <EmptyState
+            icon={ArrowRightLeft}
+            title="No remittances yet"
+            description="Record your first India transfer."
+            href="/remittances/new"
+            cta="New Transfer"
+          />
         ) : (
           <div className="space-y-2">
             {remittances.map((r) => (
-              <div key={r.id} className="bg-gray-900 border border-gray-800 rounded-xl px-5 py-4 flex justify-between items-center">
+              <Card key={r.id} className="flex-row items-center justify-between gap-0 px-5 py-4">
                 <div>
-                  <p className="text-white text-sm font-medium">{r.category.name}</p>
-                  <p className="text-gray-500 text-xs">
+                  <p className="text-foreground text-sm font-medium">{r.category.name}</p>
+                  <p className="text-muted-foreground text-xs">
                     {new Date(r.remittanceDate).toLocaleDateString('en-GB', {
                       day: 'numeric', month: 'short', year: 'numeric',
                     })}
@@ -65,15 +72,26 @@ export default async function RemittancesPage() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-white font-medium text-sm">{CurrencyService.format(Number(r.baseAmountGbp), 'GBP')}</p>
+                  <p className="text-foreground font-medium text-sm tabular-nums">
+                    {CurrencyService.format(Number(r.baseAmountGbp), 'GBP')}
+                  </p>
                   {r.convertedAmount && (
-                    <p className="text-gray-400 text-xs">₹{Number(r.convertedAmount).toLocaleString('en-IN')}</p>
+                    <p className="text-muted-foreground text-xs tabular-nums">
+                      ₹{Number(r.convertedAmount).toLocaleString('en-IN')}
+                    </p>
                   )}
-                  <span className={`text-xs ${r.status === 'COMPLETED' ? 'text-emerald-400' : r.status === 'FAILED' ? 'text-red-400' : 'text-amber-400'}`}>
+                  <Badge
+                    variant={r.status === 'COMPLETED' ? 'default' : 'secondary'}
+                    className={
+                      r.status === 'COMPLETED' ? 'bg-success/10 text-success border-0' :
+                      r.status === 'FAILED' ? 'bg-destructive/10 text-destructive border-0' :
+                      'bg-warning/10 text-warning border-0'
+                    }
+                  >
                     {r.status}
-                  </span>
+                  </Badge>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         )}

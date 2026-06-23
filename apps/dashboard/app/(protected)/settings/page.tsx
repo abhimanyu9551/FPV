@@ -1,8 +1,12 @@
 import { getCurrentUserProfile } from '@/lib/auth'
 import { incomeDAL } from '@/lib/dal/income.dal'
 import { exchangeRatesDAL } from '@/lib/dal/exchange-rates.dal'
-import { CurrencyService } from '@/lib/services/currency.service'
 import ExchangeRateForm from './_components/ExchangeRateForm'
+import { PageHeader } from '@/components/shared/PageHeader'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import Link from 'next/link'
 
 export default async function SettingsPage() {
   const profile = await getCurrentUserProfile()
@@ -20,67 +24,82 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-8 max-w-2xl">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Settings</h1>
-        <p className="text-gray-400 text-sm mt-1">Manage exchange rates and account configuration</p>
-      </div>
+      <PageHeader title="Settings" description="Manage exchange rates and account configuration" />
 
-      {/* Profile */}
-      <section className="bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-3">
-        <h2 className="text-white font-semibold">Your Profile</h2>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <p className="text-gray-500 text-xs uppercase tracking-wider">Name</p>
-            <p className="text-white mt-0.5">{profile.fullName}</p>
-          </div>
-          <div>
-            <p className="text-gray-500 text-xs uppercase tracking-wider">Email</p>
-            <p className="text-white mt-0.5">{profile.email}</p>
-          </div>
-          <div>
-            <p className="text-gray-500 text-xs uppercase tracking-wider">Role</p>
-            <p className="text-white mt-0.5">{profile.role}</p>
-          </div>
-          <div>
-            <p className="text-gray-500 text-xs uppercase tracking-wider">Member since</p>
-            <p className="text-white mt-0.5">
-              {new Date(profile.createdAt).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Exchange Rate */}
-      <section className="bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-4">
-        <div>
-          <h2 className="text-white font-semibold">GBP → INR Exchange Rate</h2>
-          <p className="text-gray-500 text-xs mt-0.5">Manually set the rate used for salary processing and remittances</p>
-        </div>
-        {latestRate && (
-          <div className="bg-gray-800/60 border border-gray-700 rounded-xl px-4 py-3">
-            <p className="text-gray-400 text-xs">Current rate (as of {new Date(latestRate.effectiveDate).toLocaleDateString('en-GB')})</p>
-            <p className="text-white text-2xl font-bold mt-1">£1 = ₹{Number(latestRate.rate).toFixed(2)}</p>
-          </div>
-        )}
-        <ExchangeRateForm currentRate={latestRate ? Number(latestRate.rate) : undefined} userId={profile.id} />
-      </section>
-
-      {/* Income Sources Summary */}
-      <section className="bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-white font-semibold">Income Sources</h2>
-          <a href="/allocation" className="text-indigo-400 hover:text-indigo-300 text-xs transition">Manage rules →</a>
-        </div>
-        {sourcesWithRules.map((s) => (
-          <div key={s.id} className="flex justify-between items-center py-2 border-b border-gray-800 last:border-0">
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Profile</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="text-white text-sm">{s.name}</p>
-              <p className="text-gray-500 text-xs">{s.sourceType} · {s.frequency} · {s.currencyCode}</p>
+              <p className="text-muted-foreground text-xs uppercase tracking-wider">Name</p>
+              <p className="text-foreground mt-0.5">{profile.fullName}</p>
             </div>
-            <span className="text-gray-400 text-xs">{s.ruleCount} rule{s.ruleCount !== 1 ? 's' : ''}</span>
+            <div>
+              <p className="text-muted-foreground text-xs uppercase tracking-wider">Email</p>
+              <p className="text-foreground mt-0.5">{profile.email}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-xs uppercase tracking-wider">Role</p>
+              <p className="text-foreground mt-0.5">{profile.role}</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-xs uppercase tracking-wider">Member since</p>
+              <p className="text-foreground mt-0.5">
+                {new Date(profile.createdAt).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}
+              </p>
+            </div>
           </div>
-        ))}
-      </section>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>GBP → INR Exchange Rate</CardTitle>
+          <CardDescription>Manually set the rate used for salary processing and remittances</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {latestRate && (
+            <div className="rounded-xl bg-muted px-4 py-3">
+              <p className="text-muted-foreground text-xs">
+                Current rate (as of {new Date(latestRate.effectiveDate).toLocaleDateString('en-GB')})
+              </p>
+              <p className="text-foreground text-2xl font-bold font-heading mt-1">
+                £1 = ₹{Number(latestRate.rate).toFixed(2)}
+              </p>
+            </div>
+          )}
+          <ExchangeRateForm currentRate={latestRate ? Number(latestRate.rate) : undefined} userId={profile.id} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Income Sources</CardTitle>
+            <Link href="/allocation" className="text-primary hover:text-primary/80 text-xs transition">
+              Manage rules →
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-0">
+            {sourcesWithRules.map((s, i) => (
+              <div key={s.id}>
+                <div className="flex justify-between items-center py-3">
+                  <div>
+                    <p className="text-foreground text-sm">{s.name}</p>
+                    <p className="text-muted-foreground text-xs">{s.sourceType} · {s.frequency} · {s.currencyCode}</p>
+                  </div>
+                  <Badge variant="secondary">{s.ruleCount} rule{s.ruleCount !== 1 ? 's' : ''}</Badge>
+                </div>
+                {i < sourcesWithRules.length - 1 && <Separator />}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

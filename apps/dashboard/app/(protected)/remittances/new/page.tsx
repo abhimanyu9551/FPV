@@ -3,6 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { PageHeader } from '@/components/shared/PageHeader'
 
 interface Category {
   id: string
@@ -34,7 +40,6 @@ export default function NewRemittancePage() {
     setLoading(true)
     setError('')
     const fd = new FormData(e.currentTarget)
-
     const body = {
       remittanceCategoryId: fd.get('remittanceCategoryId') as string,
       remittanceDate: fd.get('remittanceDate') as string,
@@ -43,7 +48,6 @@ export default function NewRemittancePage() {
       exchangeRate: Number(fd.get('exchangeRate')),
       notes: (fd.get('notes') as string) || undefined,
     }
-
     try {
       const res = await fetch('/api/v1/remittances', {
         method: 'POST',
@@ -66,123 +70,111 @@ export default function NewRemittancePage() {
 
   return (
     <div className="max-w-xl space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/remittances" className="text-gray-500 hover:text-white transition text-sm">
+      <div className="flex items-center gap-3 text-sm">
+        <Link href="/remittances" className="text-muted-foreground hover:text-foreground transition">
           ← India Transfers
         </Link>
-        <span className="text-gray-700">/</span>
-        <span className="text-gray-300 text-sm">New Transfer</span>
+        <span className="text-muted-foreground/40">/</span>
+        <span className="text-foreground">New Transfer</span>
       </div>
 
-      <div>
-        <h1 className="text-2xl font-bold text-white">New India Transfer</h1>
-        <p className="text-gray-400 text-sm mt-1">Record a GBP → INR remittance</p>
-      </div>
+      <PageHeader title="New India Transfer" description="Record a GBP → INR remittance" />
 
-      <form onSubmit={handleSubmit} className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-5">
-        {error && (
-          <div className="bg-red-950/40 border border-red-800 text-red-300 text-sm rounded-lg px-4 py-3">
-            {error}
-          </div>
-        )}
+      <Card>
+        <CardContent className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="bg-destructive/10 border border-destructive/30 text-destructive text-sm rounded-lg px-4 py-3">
+                {error}
+              </div>
+            )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1.5">Category</label>
-          <select
-            name="remittanceCategoryId"
-            required
-            className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="">Select category…</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-                {c.monthlyBudget ? ` (budget: £${parseFloat(c.monthlyBudget).toFixed(0)}/mo)` : ''}
-              </option>
-            ))}
-          </select>
-        </div>
+            <div className="space-y-1.5">
+              <Label>Category</Label>
+              <select
+                name="remittanceCategoryId"
+                required
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="">Select category…</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                    {c.monthlyBudget ? ` (budget: £${parseFloat(c.monthlyBudget).toFixed(0)}/mo)` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1.5">Amount (GBP £)</label>
-            <input
-              type="number"
-              name="originalAmount"
-              min="0.01"
-              step="0.01"
-              required
-              placeholder="300.00"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1.5">
-              GBP → INR Rate
-              <span className="text-gray-500 font-normal ml-1 text-xs">(₹ per £1)</span>
-            </label>
-            <input
-              type="number"
-              name="exchangeRate"
-              min="1"
-              step="0.01"
-              required
-              placeholder="107.50"
-              value={rate}
-              onChange={(e) => setRate(e.target.value)}
-              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-        </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Amount (GBP £)</Label>
+                <Input
+                  type="number"
+                  name="originalAmount"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  placeholder="300.00"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>
+                  GBP → INR Rate
+                  <span className="text-muted-foreground font-normal ml-1 text-xs">(₹ per £1)</span>
+                </Label>
+                <Input
+                  type="number"
+                  name="exchangeRate"
+                  min="1"
+                  step="0.01"
+                  required
+                  placeholder="107.50"
+                  value={rate}
+                  onChange={(e) => setRate(e.target.value)}
+                />
+              </div>
+            </div>
 
-        {convertedInr && (
-          <div className="bg-indigo-950/30 border border-indigo-800/40 rounded-lg px-4 py-2.5 flex justify-between items-center">
-            <span className="text-gray-400 text-sm">You&apos;re sending</span>
-            <span className="text-indigo-300 font-semibold text-sm">≈ ₹{convertedInr}</span>
-          </div>
-        )}
+            {convertedInr && (
+              <div className="bg-primary/10 border border-primary/20 rounded-lg px-4 py-2.5 flex justify-between items-center">
+                <span className="text-muted-foreground text-sm">You&apos;re sending</span>
+                <span className="text-primary font-semibold text-sm tabular-nums">≈ ₹{convertedInr}</span>
+              </div>
+            )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1.5">Transfer Date</label>
-          <input
-            type="date"
-            name="remittanceDate"
-            required
-            defaultValue={new Date().toISOString().slice(0, 10)}
-            className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
+            <div className="space-y-1.5">
+              <Label>Transfer Date</Label>
+              <Input
+                type="date"
+                name="remittanceDate"
+                required
+                defaultValue={new Date().toISOString().slice(0, 10)}
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1.5">
-            Notes <span className="text-gray-500 font-normal">(optional)</span>
-          </label>
-          <textarea
-            name="notes"
-            rows={2}
-            placeholder="e.g. June dad support"
-            className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-          />
-        </div>
+            <div className="space-y-1.5">
+              <Label>Notes <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Textarea
+                name="notes"
+                rows={2}
+                placeholder="e.g. June dad support"
+              />
+            </div>
 
-        <div className="flex gap-3 pt-1">
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white font-semibold rounded-lg transition"
-          >
-            {loading ? 'Saving…' : 'Record Transfer'}
-          </button>
-          <Link
-            href="/remittances"
-            className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium rounded-lg transition text-center"
-          >
-            Cancel
-          </Link>
-        </div>
-      </form>
+            <div className="flex gap-3 pt-1">
+              <Button type="submit" disabled={loading} className="flex-1">
+                {loading ? 'Saving…' : 'Record Transfer'}
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/remittances">Cancel</Link>
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }

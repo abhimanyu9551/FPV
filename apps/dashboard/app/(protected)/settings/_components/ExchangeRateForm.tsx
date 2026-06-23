@@ -2,6 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
 
 export default function ExchangeRateForm({ currentRate, userId }: { currentRate?: number; userId: string }) {
   const router = useRouter()
@@ -45,15 +48,13 @@ export default function ExchangeRateForm({ currentRate, userId }: { currentRate?
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
-      {success && (
-        <p className="text-emerald-400 text-sm">Exchange rate updated.</p>
-      )}
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {success && <p className="text-success text-sm">Exchange rate updated.</p>}
+      {error && <p className="text-destructive text-sm">{error}</p>}
 
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">New Rate (₹ per £1)</label>
-          <input
+        <div className="space-y-1">
+          <Label className="text-xs">New Rate (₹ per £1)</Label>
+          <Input
             type="number"
             name="rate"
             min="1"
@@ -61,36 +62,31 @@ export default function ExchangeRateForm({ currentRate, userId }: { currentRate?
             required
             defaultValue={currentRate}
             placeholder="107.50"
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
-        <div>
-          <label className="block text-xs text-gray-400 mb-1">Effective Date</label>
-          <input
+        <div className="space-y-1">
+          <Label className="text-xs">Effective Date</Label>
+          <Input
             type="date"
             name="effectiveDate"
             required
             defaultValue={new Date().toISOString().slice(0, 10)}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
       </div>
-      <div>
-        <label className="block text-xs text-gray-400 mb-1">Notes <span className="text-gray-600">(optional)</span></label>
-        <input
+      <div className="space-y-1">
+        <Label className="text-xs">
+          Notes <span className="text-muted-foreground/60">(optional)</span>
+        </Label>
+        <Input
           type="text"
           name="notes"
           placeholder="e.g. June salary processing"
-          className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
         />
       </div>
-      <button
-        type="submit"
-        disabled={loading}
-        className="px-5 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white text-sm font-medium rounded-lg transition"
-      >
+      <Button type="submit" disabled={loading} size="sm">
         {loading ? 'Saving…' : 'Update Rate'}
-      </button>
+      </Button>
     </form>
   )
 }

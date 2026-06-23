@@ -33,15 +33,15 @@ interface IncomeSource {
 // ─── Constants ───────────────────────────────────────────────
 
 const CATEGORY_LABELS: Record<string, { label: string; icon: string; color: string }> = {
-  CREDIT_CARD_PAYMENT: { label: 'Credit Card', icon: '💳', color: 'text-red-400' },
+  CREDIT_CARD_PAYMENT: { label: 'Credit Card', icon: '💳', color: 'text-destructive' },
   EMI:                 { label: 'EMI',          icon: '🏦', color: 'text-orange-400' },
   RENT:                { label: 'Rent',          icon: '🏠', color: 'text-blue-400' },
   GROCERIES:           { label: 'Groceries',     icon: '🛒', color: 'text-green-400' },
   LEISURE:             { label: 'Leisure',       icon: '🎭', color: 'text-purple-400' },
-  INVESTMENT:          { label: 'Investment',    icon: '📈', color: 'text-emerald-400' },
+  INVESTMENT:          { label: 'Investment',    icon: '📈', color: 'text-success' },
   SAVINGS:             { label: 'Savings',       icon: '💰', color: 'text-yellow-400' },
-  GENERAL_EXPENSE:     { label: 'General',       icon: '📋', color: 'text-gray-400' },
-  OTHER:               { label: 'Other',         icon: '•',  color: 'text-gray-400' },
+  GENERAL_EXPENSE:     { label: 'General',       icon: '📋', color: 'text-muted-foreground' },
+  OTHER:               { label: 'Other',         icon: '•',  color: 'text-muted-foreground' },
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -56,9 +56,9 @@ const CATEGORIES = Object.entries(CATEGORY_LABELS).map(([v, { label }]) => ({ va
 
 function SplitBadge({ split, sourceName }: { split: Split; sourceName: string }) {
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-800 rounded-md text-xs text-gray-300">
-      <span className="text-gray-500">{sourceName}:</span>
-      <span className="font-semibold text-white">{split.contributionPercent}%</span>
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-muted rounded-md text-xs text-foreground/80">
+      <span className="text-muted-foreground">{sourceName}:</span>
+      <span className="font-semibold text-foreground">{split.contributionPercent}%</span>
     </span>
   )
 }
@@ -95,8 +95,8 @@ function SplitEditor({ sources, splits, onChange }: SplitEditorProps) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="block text-xs text-gray-400">Who pays &amp; how much?</label>
-        <span className={`text-xs font-medium ${total === 100 ? 'text-emerald-400' : total > 100 ? 'text-red-400' : 'text-amber-400'}`}>
+        <label className="block text-xs text-muted-foreground">Who pays &amp; how much?</label>
+        <span className={`text-xs font-medium ${total === 100 ? 'text-success' : total > 100 ? 'text-destructive' : 'text-warning'}`}>
           Total: {total}%
         </span>
       </div>
@@ -110,9 +110,9 @@ function SplitEditor({ sources, splits, onChange }: SplitEditorProps) {
                 type="checkbox"
                 checked={isActive}
                 onChange={(e) => toggleSource(src.id, e.target.checked)}
-                className="rounded border-gray-600 bg-gray-800 text-indigo-500 focus:ring-indigo-500"
+                className="rounded border-border bg-muted text-primary focus:ring-ring"
               />
-              <span className="text-sm text-gray-300 truncate">{src.name}</span>
+              <span className="text-sm text-foreground/80 truncate">{src.name}</span>
             </label>
             {isActive && (
               <div className="flex items-center gap-1 shrink-0">
@@ -123,21 +123,21 @@ function SplitEditor({ sources, splits, onChange }: SplitEditorProps) {
                   step={1}
                   value={split!.pct}
                   onChange={(e) => setSplit(src.id, Number(e.target.value))}
-                  className="w-16 px-2 py-1 bg-gray-800 border border-gray-700 rounded-md text-white text-sm text-right focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-16 px-2 py-1 bg-muted border border-border rounded-md text-foreground text-sm text-right focus:outline-none focus:ring-1 focus:ring-ring"
                 />
-                <span className="text-gray-500 text-xs">%</span>
+                <span className="text-muted-foreground text-xs">%</span>
               </div>
             )}
           </div>
         )
       })}
       {total !== 100 && splits.length > 0 && (
-        <p className="text-xs text-amber-400">
+        <p className="text-xs text-warning">
           Split percentages should add up to 100% (currently {total}%)
         </p>
       )}
       {splits.length === 0 && (
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-muted-foreground">
           No sources selected — deduction will come from the largest available balance.
         </p>
       )}
@@ -211,38 +211,38 @@ function EditForm({ rule, sources, onSave, onCancel }: EditFormProps) {
   }
 
   return (
-    <form onSubmit={submit} className="border border-indigo-800 bg-indigo-950/20 rounded-xl p-4 space-y-3 mt-2">
-      <p className="text-indigo-300 text-sm font-medium">Edit rule</p>
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+    <form onSubmit={submit} className="border border-primary/30 bg-primary/5 rounded-xl p-4 space-y-3 mt-2">
+      <p className="text-primary text-sm font-medium">Edit rule</p>
+      {error && <p className="text-destructive text-xs">{error}</p>}
 
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2">
-          <label className="block text-xs text-gray-400 mb-1">Label</label>
+          <label className="block text-xs text-muted-foreground mb-1">Label</label>
           <input
             required
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-foreground text-sm placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
 
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Category</label>
+          <label className="block text-xs text-muted-foreground mb-1">Category</label>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           >
             {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
         </div>
 
         <div>
-          <label className="block text-xs text-gray-400 mb-1">Type</label>
+          <label className="block text-xs text-muted-foreground mb-1">Type</label>
           <select
             value={allocType}
             onChange={(e) => setAllocType(e.target.value)}
-            className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           >
             <option value="FIXED_AMOUNT">Fixed amount (£)</option>
             <option value="PERCENTAGE">% of combined income</option>
@@ -252,23 +252,23 @@ function EditForm({ rule, sources, onSave, onCancel }: EditFormProps) {
 
         {allocType === 'FIXED_AMOUNT' && (
           <div className="col-span-2">
-            <label className="block text-xs text-gray-400 mb-1">Amount (£)</label>
+            <label className="block text-xs text-muted-foreground mb-1">Amount (£)</label>
             <input
               type="number" min="0.01" step="0.01" required
               value={fixedAmt}
               onChange={(e) => setFixedAmt(Number(e.target.value))}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
         )}
         {allocType === 'PERCENTAGE' && (
           <div className="col-span-2">
-            <label className="block text-xs text-gray-400 mb-1">Percentage of combined income (%)</label>
+            <label className="block text-xs text-muted-foreground mb-1">Percentage of combined income (%)</label>
             <input
               type="number" min="0.01" max="100" step="0.01" required
               value={pctAmt}
               onChange={(e) => setPctAmt(Number(e.target.value))}
-              className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
         )}
@@ -280,11 +280,11 @@ function EditForm({ rule, sources, onSave, onCancel }: EditFormProps) {
 
       <div className="flex gap-2 pt-1">
         <button type="submit" disabled={saving}
-          className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white text-sm font-medium rounded-lg transition">
+          className="px-4 py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-foreground text-sm font-medium rounded-lg transition">
           {saving ? 'Saving…' : 'Save'}
         </button>
         <button type="button" onClick={onCancel}
-          className="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition">
+          className="px-4 py-1.5 bg-muted hover:bg-accent text-foreground/80 text-sm rounded-lg transition">
           Cancel
         </button>
       </div>
@@ -388,24 +388,24 @@ export default function SharedAllocationRulesClient({ rules: initialRules, sourc
   }
 
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-4">
+    <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-white font-semibold">Shared Allocation Rules</h2>
-          <p className="text-gray-500 text-xs mt-0.5">
+          <h2 className="text-foreground font-semibold">Shared Allocation Rules</h2>
+          <p className="text-muted-foreground text-xs mt-0.5">
             Expenses split across both salaries · {rules.length} rule{rules.length !== 1 ? 's' : ''}
           </p>
         </div>
         <button
           onClick={() => { setAdding(!adding); setError('') }}
-          className="text-sm px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition"
+          className="text-sm px-3 py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 text-foreground rounded-lg transition"
         >
           + Add Rule
         </button>
       </div>
 
       {rules.length === 0 && !adding ? (
-        <p className="text-gray-600 text-sm text-center py-4">
+        <p className="text-muted-foreground/60 text-sm text-center py-4">
           No shared rules yet. Add rent, EMI, credit card payments, etc.
         </p>
       ) : (
@@ -418,21 +418,21 @@ export default function SharedAllocationRulesClient({ rules: initialRules, sourc
                 <div
                   className={`flex items-start justify-between px-4 py-3 rounded-xl border ${
                     rule.isEnabled
-                      ? 'bg-gray-800/60 border-gray-700'
-                      : 'bg-gray-800/20 border-gray-800 opacity-50'
+                      ? 'bg-muted/60 border-border'
+                      : 'bg-muted/20 border-border opacity-50'
                   }`}
                 >
                   <div className="flex items-start gap-3 min-w-0">
-                    <span className="text-gray-600 text-xs w-5 text-right font-mono mt-0.5">{i + 1}</span>
+                    <span className="text-muted-foreground/60 text-xs w-5 text-right font-mono mt-0.5">{i + 1}</span>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-lg">{cat.icon}</span>
-                        <p className="text-white text-sm font-medium">{rule.label}</p>
-                        <span className={`text-xs px-1.5 py-0.5 rounded bg-gray-700 ${cat.color}`}>
+                        <p className="text-foreground text-sm font-medium">{rule.label}</p>
+                        <span className={`text-xs px-1.5 py-0.5 rounded bg-accent ${cat.color}`}>
                           {cat.label}
                         </span>
                       </div>
-                      <p className="text-gray-500 text-xs mt-0.5">
+                      <p className="text-muted-foreground text-xs mt-0.5">
                         {TYPE_LABELS[rule.allocationType]} · {RuleAmount(rule)}
                       </p>
                       {rule.splits.length > 0 && (
@@ -451,7 +451,7 @@ export default function SharedAllocationRulesClient({ rules: initialRules, sourc
                   <div className="flex items-center gap-1.5 shrink-0 ml-3">
                     <button
                       onClick={() => setEditingId(isEditing ? null : rule.id)}
-                      className="text-xs px-2 py-1 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-md transition"
+                      className="text-xs px-2 py-1 bg-accent hover:bg-accent text-foreground/80 rounded-md transition"
                     >
                       {isEditing ? 'Cancel' : 'Edit'}
                     </button>
@@ -459,15 +459,15 @@ export default function SharedAllocationRulesClient({ rules: initialRules, sourc
                       onClick={() => handleToggle(rule)}
                       className={`text-xs px-2 py-1 rounded-md transition ${
                         rule.isEnabled
-                          ? 'text-emerald-400 bg-emerald-900/30 hover:bg-emerald-900/50'
-                          : 'text-gray-500 bg-gray-800 hover:bg-gray-700'
+                          ? 'text-success bg-success/20 hover:bg-success/30'
+                          : 'text-muted-foreground bg-muted hover:bg-accent'
                       }`}
                     >
                       {rule.isEnabled ? 'On' : 'Off'}
                     </button>
                     <button
                       onClick={() => handleDelete(rule.id)}
-                      className="text-xs text-red-500 hover:text-red-400 transition px-2 py-1"
+                      className="text-xs text-red-500 hover:text-destructive transition px-2 py-1"
                     >
                       ✕
                     </button>
@@ -491,39 +491,39 @@ export default function SharedAllocationRulesClient({ rules: initialRules, sourc
       {adding && (
         <form
           onSubmit={handleAdd}
-          className="border border-indigo-800 bg-indigo-950/20 rounded-xl p-4 space-y-3 mt-2"
+          className="border border-primary/30 bg-primary/5 rounded-xl p-4 space-y-3 mt-2"
         >
-          <p className="text-indigo-300 text-sm font-medium">New shared allocation rule</p>
-          {error && <p className="text-red-400 text-xs">{error}</p>}
+          <p className="text-primary text-sm font-medium">New shared allocation rule</p>
+          {error && <p className="text-destructive text-xs">{error}</p>}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="col-span-2">
-              <label className="block text-xs text-gray-400 mb-1">Label</label>
+              <label className="block text-xs text-muted-foreground mb-1">Label</label>
               <input
                 name="label"
                 required
                 placeholder="e.g. Rent, EMI, Netflix"
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-foreground text-sm placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
 
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Category</label>
+              <label className="block text-xs text-muted-foreground mb-1">Category</label>
               <select
                 name="category"
                 defaultValue="OTHER"
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 {CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
               </select>
             </div>
 
             <div>
-              <label className="block text-xs text-gray-400 mb-1">Allocation Type</label>
+              <label className="block text-xs text-muted-foreground mb-1">Allocation Type</label>
               <select
                 value={allocType}
                 onChange={(e) => setAllocType(e.target.value as typeof allocType)}
-                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-ring"
               >
                 <option value="FIXED_AMOUNT">Fixed amount (£)</option>
                 <option value="PERCENTAGE">% of combined income</option>
@@ -535,29 +535,29 @@ export default function SharedAllocationRulesClient({ rules: initialRules, sourc
 
             {allocType === 'FIXED_AMOUNT' && (
               <div className="col-span-2">
-                <label className="block text-xs text-gray-400 mb-1">Amount (£)</label>
+                <label className="block text-xs text-muted-foreground mb-1">Amount (£)</label>
                 <input
                   name="allocationValue"
                   type="number" min="0.01" step="0.01" required
                   placeholder="775.00"
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-foreground text-sm placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                 />
               </div>
             )}
             {allocType === 'PERCENTAGE' && (
               <div className="col-span-2">
-                <label className="block text-xs text-gray-400 mb-1">% of combined income</label>
+                <label className="block text-xs text-muted-foreground mb-1">% of combined income</label>
                 <input
                   name="allocationPercent"
                   type="number" min="0.01" max="100" step="0.01" required
                   placeholder="10"
-                  className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-foreground text-sm placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                 />
               </div>
             )}
             {allocType === 'REMAINING' && (
               <div className="col-span-2">
-                <p className="text-gray-500 text-xs py-1">
+                <p className="text-muted-foreground text-xs py-1">
                   Allocates whatever is left after all fixed &amp; percentage rules have run.
                 </p>
               </div>
@@ -570,11 +570,11 @@ export default function SharedAllocationRulesClient({ rules: initialRules, sourc
 
           <div className="flex gap-2 pt-1">
             <button type="submit" disabled={saving}
-              className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white text-sm font-medium rounded-lg transition">
+              className="px-4 py-1.5 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 text-foreground text-sm font-medium rounded-lg transition">
               {saving ? 'Adding…' : 'Add Rule'}
             </button>
             <button type="button" onClick={() => { setAdding(false); setError(''); setAddSplits([]) }}
-              className="px-4 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm rounded-lg transition">
+              className="px-4 py-1.5 bg-muted hover:bg-accent text-foreground/80 text-sm rounded-lg transition">
               Cancel
             </button>
           </div>

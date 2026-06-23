@@ -3,6 +3,10 @@ import Link from 'next/link'
 import { getCurrentUserProfile } from '@/lib/auth'
 import { reportsDAL } from '@/lib/dal/reports.dal'
 import { CurrencyService } from '@/lib/services/currency.service'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import { Lock, FileEdit } from 'lucide-react'
 
 export default async function SnapshotDetailPage({
   params,
@@ -12,7 +16,6 @@ export default async function SnapshotDetailPage({
   await getCurrentUserProfile()
   const { month } = await params
 
-  // Validate YYYY-MM
   if (!/^\d{4}-\d{2}$/.test(month)) notFound()
 
   const snapshotDate = new Date(`${month}-01T00:00:00.000Z`)
@@ -33,60 +36,72 @@ export default async function SnapshotDetailPage({
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div className="flex items-center gap-3">
-        <Link href="/reports" className="text-gray-500 hover:text-white transition text-sm">
+      <div className="flex items-center gap-3 text-sm">
+        <Link href="/reports" className="text-muted-foreground hover:text-foreground transition">
           ← Reports
         </Link>
-        <span className="text-gray-700">/</span>
-        <span className="text-gray-300 text-sm">{monthLabel}</span>
+        <span className="text-muted-foreground/40">/</span>
+        <span className="text-foreground">{monthLabel}</span>
       </div>
 
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">{monthLabel}</h1>
-          <p className="text-gray-400 text-sm mt-1">
-            {snapshot.isLocked ? '🔒 Locked snapshot' : '📝 Draft snapshot'}
-          </p>
+          <h1 className="text-2xl font-bold font-heading text-foreground">{monthLabel}</h1>
+          <div className="flex items-center gap-2 mt-1">
+            {snapshot.isLocked ? (
+              <Badge variant="secondary" className="gap-1 text-xs">
+                <Lock className="h-3 w-3" /> Locked
+              </Badge>
+            ) : (
+              <Badge variant="secondary" className="gap-1 text-xs">
+                <FileEdit className="h-3 w-3" /> Draft
+              </Badge>
+            )}
+          </div>
         </div>
         {delta !== null && (
-          <div className={`px-3 py-1.5 rounded-lg text-sm font-medium ${deltaPos ? 'bg-emerald-900/40 text-emerald-400' : 'bg-red-900/40 text-red-400'}`}>
+          <Badge className={deltaPos ? 'bg-success/10 text-success border-0' : 'bg-destructive/10 text-destructive border-0'}>
             {deltaPos ? '+' : ''}{CurrencyService.format(delta, 'GBP')} MoM
-          </div>
+          </Badge>
         )}
       </div>
 
-      {/* Net Worth */}
       {netWorth && (
-        <section className="bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-4">
-          <h2 className="text-white font-semibold">Net Worth</h2>
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <p className="text-gray-500 text-xs uppercase tracking-wider">Assets</p>
-              <p className="text-emerald-400 font-bold text-lg mt-1">
-                {CurrencyService.format(Number(netWorth.totalAssetsGbp), 'GBP')}
-              </p>
+        <Card>
+          <CardHeader>
+            <CardTitle>Net Worth</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <p className="text-muted-foreground text-xs uppercase tracking-wider">Assets</p>
+                <p className="text-success font-bold text-lg mt-1 tabular-nums">
+                  {CurrencyService.format(Number(netWorth.totalAssetsGbp), 'GBP')}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs uppercase tracking-wider">Liabilities</p>
+                <p className="text-destructive font-bold text-lg mt-1 tabular-nums">
+                  {CurrencyService.format(Number(netWorth.totalLiabilitiesGbp), 'GBP')}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-xs uppercase tracking-wider">Net Worth</p>
+                <p className={`font-bold text-lg mt-1 tabular-nums ${Number(netWorth.netWorthGbp) >= 0 ? 'text-foreground' : 'text-destructive'}`}>
+                  {CurrencyService.format(Number(netWorth.netWorthGbp), 'GBP')}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-gray-500 text-xs uppercase tracking-wider">Liabilities</p>
-              <p className="text-red-400 font-bold text-lg mt-1">
-                {CurrencyService.format(Number(netWorth.totalLiabilitiesGbp), 'GBP')}
-              </p>
-            </div>
-            <div>
-              <p className="text-gray-500 text-xs uppercase tracking-wider">Net Worth</p>
-              <p className={`font-bold text-lg mt-1 ${Number(netWorth.netWorthGbp) >= 0 ? 'text-white' : 'text-red-400'}`}>
-                {CurrencyService.format(Number(netWorth.netWorthGbp), 'GBP')}
-              </p>
-            </div>
-          </div>
-        </section>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Income */}
       {income && (
-        <section className="bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-3">
-          <h2 className="text-white font-semibold">Income Summary</h2>
-          <div className="space-y-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Income Summary</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
             {[
               { label: 'Total income', value: Number(income.totalGbp) },
               { label: 'Salary', value: Number(income.salaryGbp) },
@@ -94,43 +109,45 @@ export default async function SnapshotDetailPage({
               { label: 'Remaining cash', value: Number(income.remainingCashGbp), highlight: true },
             ].map(({ label, value, negative, highlight }) => (
               <div key={label} className="flex justify-between items-center">
-                <span className="text-gray-400 text-sm">{label}</span>
-                <span className={`text-sm font-medium ${highlight ? 'text-emerald-400' : negative ? 'text-red-400' : 'text-white'}`}>
+                <span className="text-muted-foreground text-sm">{label}</span>
+                <span className={`text-sm font-medium tabular-nums ${highlight ? 'text-success' : negative ? 'text-destructive' : 'text-foreground'}`}>
                   {negative && value > 0 ? '-' : ''}{CurrencyService.format(value, 'GBP')}
                 </span>
               </div>
             ))}
-          </div>
-        </section>
+          </CardContent>
+        </Card>
       )}
 
-      {/* Debts at snapshot time */}
       {debts.length > 0 && (
-        <section className="bg-gray-900 border border-gray-800 rounded-2xl p-5 space-y-3">
-          <h2 className="text-white font-semibold">Debt Snapshot</h2>
-          <div className="space-y-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Debt Snapshot</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
             {debts.map((d) => (
               <div key={d.id} className="flex justify-between items-center">
                 <div>
-                  <p className="text-white text-sm">{d.debtName}</p>
-                  <p className="text-gray-600 text-xs">{d.debtType.replace(/_/g, ' ')}</p>
+                  <p className="text-foreground text-sm">{d.debtName}</p>
+                  <p className="text-muted-foreground/60 text-xs">{d.debtType.replace(/_/g, ' ')}</p>
                 </div>
-                <p className="text-red-400 text-sm font-medium">
+                <p className="text-destructive text-sm font-medium tabular-nums">
                   {CurrencyService.format(Number(d.outstandingBalance), 'GBP')}
                 </p>
               </div>
             ))}
-            <div className="border-t border-gray-800 pt-2 flex justify-between">
-              <span className="text-gray-400 text-sm font-medium">Total debt</span>
-              <span className="text-red-400 font-bold">
+            <Separator />
+            <div className="flex justify-between pt-1">
+              <span className="text-muted-foreground text-sm font-medium">Total debt</span>
+              <span className="text-destructive font-bold tabular-nums">
                 {CurrencyService.format(
                   debts.reduce((s, d) => s + Number(d.outstandingBalance), 0),
                   'GBP'
                 )}
               </span>
             </div>
-          </div>
-        </section>
+          </CardContent>
+        </Card>
       )}
     </div>
   )

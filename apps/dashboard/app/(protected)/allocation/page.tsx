@@ -3,6 +3,9 @@ import { incomeDAL } from '@/lib/dal/income.dal'
 import AllocationRulesClient from './_components/AllocationRulesClient'
 import SharedAllocationRulesClient from './_components/SharedAllocationRulesClient'
 import HowItWorks from './_components/HowItWorks'
+import { PageHeader } from '@/components/shared/PageHeader'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { PieChart } from 'lucide-react'
 
 export default async function AllocationPage() {
   const profile = await getCurrentUserProfile()
@@ -51,36 +54,35 @@ export default async function AllocationPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white">Salary Allocation</h1>
-        <p className="text-gray-400 text-sm mt-1">
-          Rules that distribute your combined salary automatically each month
-        </p>
-      </div>
+      <PageHeader
+        title="Salary Allocation"
+        description="Rules that distribute your combined salary automatically each month"
+      />
 
       <HowItWorks />
 
       {sources.length === 0 ? (
-        <div className="bg-gray-900 border border-gray-800 border-dashed rounded-xl px-6 py-12 text-center">
-          <p className="text-white font-medium">No income sources configured</p>
-          <p className="text-gray-500 text-sm mt-1">Add income sources first via the Income page.</p>
-        </div>
+        <EmptyState
+          icon={PieChart}
+          title="No income sources configured"
+          description="Add income sources first via the Income page."
+          href="/income"
+          cta="Go to Income"
+        />
       ) : (
         <>
-          {/* Shared rules — split across both salaries */}
           <div>
-            <h2 className="text-lg font-semibold text-white mb-3">Shared Rules</h2>
-            <p className="text-gray-500 text-sm mb-3">
+            <h2 className="text-lg font-semibold text-foreground mb-3">Shared Rules</h2>
+            <p className="text-muted-foreground text-sm mb-3">
               Each rule splits an expense across your salary sources by percentage.
               Processed in order: credit card first, then EMI, rent, etc.
             </p>
             <SharedAllocationRulesClient rules={sharedRulesList} sources={sourceList} />
           </div>
 
-          {/* Per-source rules */}
           <div>
-            <h2 className="text-lg font-semibold text-white mb-1">Per-Source Rules</h2>
-            <p className="text-gray-500 text-sm mb-3">
+            <h2 className="text-lg font-semibold text-foreground mb-1">Per-Source Rules</h2>
+            <p className="text-muted-foreground text-sm mb-3">
               Additional rules specific to a single income source (applied after shared rules).
             </p>
             <div className="space-y-4">

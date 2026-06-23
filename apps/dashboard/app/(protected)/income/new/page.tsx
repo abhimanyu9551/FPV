@@ -3,6 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { PageHeader } from '@/components/shared/PageHeader'
 
 interface IncomeSource {
   id: string
@@ -61,120 +67,110 @@ export default function NewIncomePage() {
 
   return (
     <div className="max-w-xl space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/income" className="text-gray-500 hover:text-white transition text-sm">← Income</Link>
-        <span className="text-gray-700">/</span>
-        <span className="text-gray-300 text-sm">Add Entry</span>
+      <div className="flex items-center gap-3 text-sm">
+        <Link href="/income" className="text-muted-foreground hover:text-foreground transition">← Income</Link>
+        <span className="text-muted-foreground/40">/</span>
+        <span className="text-foreground">Add Entry</span>
       </div>
 
-      <div>
-        <h1 className="text-2xl font-bold text-white">Add Income Entry</h1>
-        <p className="text-gray-400 text-sm mt-1">Record a salary or income payment</p>
-      </div>
+      <PageHeader title="Add Income Entry" description="Record a salary or income payment" />
 
-      <form onSubmit={handleSubmit} className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-5">
-        {error && (
-          <div className="bg-red-950/40 border border-red-800 text-red-300 text-sm rounded-lg px-4 py-3">
-            {error}
-          </div>
-        )}
+      <Card>
+        <CardContent className="p-6 space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="bg-destructive/10 border border-destructive/30 text-destructive text-sm rounded-lg px-4 py-3">
+                {error}
+              </div>
+            )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1.5">Income Source</label>
-          <select
-            name="incomeSourceId"
-            required
-            className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="">Select source…</option>
-            {sources.map((s) => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
-        </div>
+            <div className="space-y-1.5">
+              <Label>Income Source</Label>
+              <select
+                name="incomeSourceId"
+                required
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <option value="">Select source…</option>
+                {sources.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
 
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1.5">Amount</label>
-            <input
-              type="number"
-              name="originalAmount"
-              min="0.01"
-              step="0.01"
-              required
-              placeholder="3000.00"
-              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1.5">Currency</label>
-            <select
-              name="originalCurrency"
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="GBP">GBP £</option>
-              <option value="INR">INR ₹</option>
-            </select>
-          </div>
-        </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label>Amount</Label>
+                <Input
+                  type="number"
+                  name="originalAmount"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  placeholder="3000.00"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Currency</Label>
+                <select
+                  name="originalCurrency"
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="GBP">GBP £</option>
+                  <option value="INR">INR ₹</option>
+                </select>
+              </div>
+            </div>
 
-        {currency !== 'GBP' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1.5">
-              GBP / {currency} Exchange Rate
-              <span className="text-gray-500 font-normal ml-1.5">(how many {currency} per £1)</span>
-            </label>
-            <input
-              type="number"
-              name="exchangeRate"
-              min="0.0001"
-              step="0.0001"
-              required
-              placeholder="107.50"
-              className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-        )}
+            {currency !== 'GBP' && (
+              <div className="space-y-1.5">
+                <Label>
+                  GBP / {currency} Exchange Rate
+                  <span className="text-muted-foreground font-normal ml-1.5">(how many {currency} per £1)</span>
+                </Label>
+                <Input
+                  type="number"
+                  name="exchangeRate"
+                  min="0.0001"
+                  step="0.0001"
+                  required
+                  placeholder="107.50"
+                />
+              </div>
+            )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1.5">Date Received</label>
-          <input
-            type="date"
-            name="receivedDate"
-            required
-            defaultValue={new Date().toISOString().slice(0, 10)}
-            className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
+            <div className="space-y-1.5">
+              <Label>Date Received</Label>
+              <Input
+                type="date"
+                name="receivedDate"
+                required
+                defaultValue={new Date().toISOString().slice(0, 10)}
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1.5">Notes <span className="text-gray-500 font-normal">(optional)</span></label>
-          <textarea
-            name="notes"
-            rows={2}
-            placeholder="e.g. June salary"
-            className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-          />
-        </div>
+            <div className="space-y-1.5">
+              <Label>Notes <span className="text-muted-foreground font-normal">(optional)</span></Label>
+              <Textarea
+                name="notes"
+                rows={2}
+                placeholder="e.g. June salary"
+              />
+            </div>
 
-        <div className="flex gap-3 pt-1">
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white font-semibold rounded-lg transition"
-          >
-            {loading ? 'Saving…' : 'Save Income Entry'}
-          </button>
-          <Link
-            href="/income"
-            className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium rounded-lg transition text-center"
-          >
-            Cancel
-          </Link>
-        </div>
-      </form>
+            <div className="flex gap-3 pt-1">
+              <Button type="submit" disabled={loading} className="flex-1">
+                {loading ? 'Saving…' : 'Save Income Entry'}
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/income">Cancel</Link>
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }

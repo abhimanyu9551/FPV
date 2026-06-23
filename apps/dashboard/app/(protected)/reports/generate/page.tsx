@@ -3,13 +3,17 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { PageHeader } from '@/components/shared/PageHeader'
 
 export default function GenerateReportPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  // Default to last month
   const lastMonth = new Date()
   lastMonth.setMonth(lastMonth.getMonth() - 1)
   const defaultMonth = lastMonth.toISOString().slice(0, 7)
@@ -43,66 +47,60 @@ export default function GenerateReportPage() {
 
   return (
     <div className="max-w-md space-y-6">
-      <div className="flex items-center gap-3">
-        <Link href="/reports" className="text-gray-500 hover:text-white transition text-sm">
+      <div className="flex items-center gap-3 text-sm">
+        <Link href="/reports" className="text-muted-foreground hover:text-foreground transition">
           ← Reports
         </Link>
-        <span className="text-gray-700">/</span>
-        <span className="text-gray-300 text-sm">Generate Snapshot</span>
+        <span className="text-muted-foreground/40">/</span>
+        <span className="text-foreground">Generate Snapshot</span>
       </div>
 
-      <div>
-        <h1 className="text-2xl font-bold text-white">Generate Monthly Snapshot</h1>
-        <p className="text-gray-400 text-sm mt-1">
-          Creates an immutable locked record of this month&apos;s income, debts, and net worth.
-        </p>
-      </div>
+      <PageHeader
+        title="Generate Monthly Snapshot"
+        description="Creates an immutable locked record of this month's income, debts, and net worth."
+      />
 
-      <div className="bg-amber-950/30 border border-amber-800/40 rounded-xl px-4 py-3 text-amber-300 text-sm space-y-1">
-        <p className="font-medium">Before generating</p>
-        <ul className="text-amber-400/80 text-xs space-y-0.5 list-disc list-inside">
+      <div className="bg-warning/10 border border-warning/30 rounded-xl px-4 py-3 space-y-1">
+        <p className="text-warning text-sm font-medium">Before generating</p>
+        <ul className="text-warning/80 text-xs space-y-0.5 list-disc list-inside">
           <li>Make sure all income entries for the month are recorded</li>
           <li>Mark remittances as COMPLETED if they went through</li>
           <li>Snapshots are locked immediately — they cannot be edited</li>
         </ul>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-5">
-        {error && (
-          <div className="bg-red-950/40 border border-red-800 text-red-300 text-sm rounded-lg px-4 py-3">
-            {error}
-          </div>
-        )}
+      <Card>
+        <CardContent className="p-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {error && (
+              <div className="bg-destructive/10 border border-destructive/30 text-destructive text-sm rounded-lg px-4 py-3">
+                {error}
+              </div>
+            )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-300 mb-1.5">Month</label>
-          <input
-            type="month"
-            name="month"
-            required
-            defaultValue={defaultMonth}
-            max={new Date().toISOString().slice(0, 7)}
-            className="w-full px-4 py-2.5 bg-gray-800 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <p className="text-gray-600 text-xs mt-1">Snapshots can only be generated for past or current months</p>
-        </div>
+            <div className="space-y-1.5">
+              <Label>Month</Label>
+              <Input
+                type="month"
+                name="month"
+                required
+                defaultValue={defaultMonth}
+                max={new Date().toISOString().slice(0, 7)}
+              />
+              <p className="text-muted-foreground/60 text-xs">Snapshots can only be generated for past or current months</p>
+            </div>
 
-        <div className="flex gap-3 pt-1">
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white font-semibold rounded-lg transition"
-          >
-            {loading ? 'Generating…' : 'Generate & Lock Snapshot'}
-          </button>
-          <Link
-            href="/reports"
-            className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 font-medium rounded-lg transition text-center"
-          >
-            Cancel
-          </Link>
-        </div>
-      </form>
+            <div className="flex gap-3 pt-1">
+              <Button type="submit" disabled={loading} className="flex-1">
+                {loading ? 'Generating…' : 'Generate & Lock Snapshot'}
+              </Button>
+              <Button variant="outline" asChild>
+                <Link href="/reports">Cancel</Link>
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }
