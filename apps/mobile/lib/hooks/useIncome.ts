@@ -56,3 +56,38 @@ export function useCreateIncomeSource() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['income', 'sources'] }),
   });
 }
+
+export function useIncomeEntry(id: string) {
+  return useQuery<IncomeEntry>({
+    queryKey: ['income', 'entry', id],
+    queryFn: () => api.get<IncomeEntry>(`/income/${id}`),
+    enabled: !!id,
+  });
+}
+
+export function useUpdateIncomeEntry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      ...data
+    }: {
+      id: string;
+      originalAmount?: number;
+      originalCurrency?: string;
+      exchangeRate?: number;
+      receivedDate?: string;
+      notes?: string | null;
+      incomeSourceId?: string;
+    }) => api.patch(`/income/${id}`, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['income'] }),
+  });
+}
+
+export function useDeleteIncomeEntry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.del(`/income/${id}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['income'] }),
+  });
+}

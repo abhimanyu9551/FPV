@@ -54,6 +54,21 @@ export const incomeDAL = {
     })
   },
 
+  async updateEntry(id: string, data: {
+    incomeSourceId?: string
+    receivedDate?: Date
+    originalAmount?: number
+    originalCurrency?: string
+    baseAmountGbp?: number
+    notes?: string | null
+  }) {
+    return db.incomeEntry.update({ where: { id }, data })
+  },
+
+  async deleteEntry(id: string) {
+    return db.incomeEntry.delete({ where: { id } })
+  },
+
   async listAllocationRules(incomeSourceId: string) {
     return db.allocationRule.findMany({
       where: { incomeSourceId },

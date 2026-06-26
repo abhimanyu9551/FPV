@@ -1,6 +1,8 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { ScreenHeader } from '@/components/ui/ScreenHeader';
@@ -26,6 +28,7 @@ function fmt(n: number, currency = 'GBP') {
 }
 
 export default function CreditCardsScreen() {
+  const router = useRouter();
   const { data: cards, isLoading } = useQuery<CreditCard[]>({
     queryKey: ['credit-cards'],
     queryFn: () => api.get<CreditCard[]>('/debts?type=CREDIT_CARD'),
@@ -60,6 +63,12 @@ export default function CreditCardsScreen() {
                     <Text style={styles.cardName}>{card.name}</Text>
                     {card.lender && <Text style={styles.cardLender}>{card.lender}</Text>}
                   </View>
+                  <TouchableOpacity
+                    onPress={() => router.push(`/(tabs)/debts/${card.id}/edit` as any)}
+                    style={styles.editBtn}
+                  >
+                    <Ionicons name="pencil-outline" size={16} color="rgba(255,255,255,0.8)" />
+                  </TouchableOpacity>
                 </View>
                 <Text style={styles.cardBalance}>{fmt(card.outstandingBalance, card.currency)}</Text>
                 <View style={styles.cardMeta}>
@@ -96,4 +105,5 @@ const styles = StyleSheet.create({
   cardMeta: { flexDirection: 'row', justifyContent: 'space-between' },
   cardMin: { ...Typography.caption, color: 'rgba(255,255,255,0.6)' },
   cardRate: { ...Typography.caption, color: 'rgba(255,255,255,0.6)' },
+  editBtn: { padding: 6 },
 });

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/shared/EmptyState'
-import { TrendingUp } from 'lucide-react'
+import { TrendingUp, Pencil } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function IncomePage() {
@@ -92,18 +92,26 @@ export default async function IncomePage() {
                     })}
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="text-success font-semibold tabular-nums">
-                    {CurrencyService.format(Number(entry.baseAmountGbp), 'GBP')}
-                  </p>
-                  {entry.originalCurrency !== 'GBP' && (
-                    <p className="text-muted-foreground text-xs tabular-nums">
-                      {entry.originalCurrency} {Number(entry.originalAmount).toLocaleString()}
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <p className="text-success font-semibold tabular-nums">
+                      {CurrencyService.format(Number(entry.baseAmountGbp), 'GBP')}
                     </p>
-                  )}
-                  <Badge variant={entry.isProcessed ? 'default' : 'secondary'} className="text-xs mt-0.5">
-                    {entry.isProcessed ? 'Allocated' : 'Pending'}
-                  </Badge>
+                    {entry.originalCurrency !== 'GBP' && (
+                      <p className="text-muted-foreground text-xs tabular-nums">
+                        {entry.originalCurrency} {Number(entry.originalAmount).toLocaleString()}
+                      </p>
+                    )}
+                    <Badge variant={entry.isProcessed ? 'default' : 'secondary'} className="text-xs mt-0.5">
+                      {entry.isProcessed ? 'Allocated' : 'Pending'}
+                    </Badge>
+                  </div>
+                  <Link
+                    href={`/income/${entry.id}/edit`}
+                    className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition"
+                  >
+                    <Pencil size={14} />
+                  </Link>
                 </div>
               </Card>
             ))}

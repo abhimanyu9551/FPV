@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/shared/EmptyState'
 import { Card } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Button } from '@/components/ui/button'
-import { CreditCard, Hash, Banknote, AlertCircle } from 'lucide-react'
+import { CreditCard, Hash, Banknote, AlertCircle, Pencil } from 'lucide-react'
 import Link from 'next/link'
 
 export default async function CreditCardsPage() {
@@ -79,10 +79,18 @@ export default async function CreditCardsPage() {
                         {card.minimumPayment ? ` · Min. ${CurrencyService.format(Number(card.minimumPayment), 'GBP')}/mo` : ''}
                       </p>
                     </div>
+                    <div className="flex items-start gap-3">
                     <div className="text-right">
                       <p className="text-destructive font-bold tabular-nums">{CurrencyService.format(balance, 'GBP')}</p>
                       <p className="text-muted-foreground text-xs tabular-nums">of {CurrencyService.format(limit, 'GBP')} limit</p>
                     </div>
+                    <Link
+                      href={`/debts/${card.id}/edit`}
+                      className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground hover:text-foreground transition mt-0.5"
+                    >
+                      <Pencil size={14} />
+                    </Link>
+                  </div>
                   </div>
 
                   <Progress value={utilPct} className="h-2" />

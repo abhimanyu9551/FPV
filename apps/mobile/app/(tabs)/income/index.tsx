@@ -6,6 +6,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -122,7 +123,12 @@ export default function IncomeScreen() {
             />
           ) : (
             entries.map((entry) => (
-              <View key={entry.id} style={styles.entryCard}>
+              <TouchableOpacity
+                key={entry.id}
+                activeOpacity={0.75}
+                onPress={() => router.push(`/(tabs)/income/${entry.id}/edit` as any)}
+                style={styles.entryCard}
+              >
                 <View style={styles.entryLeft}>
                   <Text style={styles.entryAmount}>{fmt(entry.amount, entry.currency)}</Text>
                   <Text style={styles.entryDate}>
@@ -135,7 +141,7 @@ export default function IncomeScreen() {
                   {entry.notes && <Text style={styles.entryNotes}>{entry.notes}</Text>}
                 </View>
                 <Badge label={entry.isProcessed ? 'Processed' : 'Pending'} variant={entry.isProcessed ? 'success' : 'warning'} />
-              </View>
+              </TouchableOpacity>
             ))
           )}
         </View>
