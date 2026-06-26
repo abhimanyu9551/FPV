@@ -20,61 +20,67 @@ import { Colors, Spacing, Typography } from '@/lib/colors';
 const DEBT_TYPES = ['CREDIT_CARD', 'PERSONAL_LOAN', 'FAMILY_LOAN', 'FRIEND_LOAN', 'MORTGAGE', 'STUDENT_LOAN', 'OTHER'];
 const STRATEGIES = ['SNOWBALL', 'AVALANCHE', 'CUSTOM'];
 
+function Chips({ options, value, onSelect }: { options: string[]; value: string; onSelect: (v: string) => void }) {
+  return (
+    <View style={styles.chips}>
+      {options.map((o) => (
+        <Card
+          key={o}
+          color={value === o ? Colors.primary : Colors.surfaceContainerLowest}
+          padded={false}
+          style={{ paddingHorizontal: 12, paddingVertical: 8, borderWidth: 2, borderColor: value === o ? Colors.primary : Colors.outlineVariant }}
+        >
+          <Text
+            onPress={() => onSelect(o)}
+            style={[styles.chipLabel, { color: value === o ? Colors.white : Colors.onSurface }]}
+          >
+            {o.replace(/_/g, ' ')}
+          </Text>
+        </Card>
+      ))}
+    </View>
+  );
+}
+
 export default function NewDebtScreen() {
   const router = useRouter();
   const createDebt = useCreateDebt();
 
   const [name, setName] = useState('');
-  const [type, setType] = useState('PERSONAL_LOAN');
-  const [strategy, setStrategy] = useState('AVALANCHE');
-  const [currency, setCurrency] = useState('GBP');
-  const [principal, setPrincipal] = useState('');
-  const [outstanding, setOutstanding] = useState('');
+  const [debtType, setDebtType] = useState('PERSONAL_LOAN');
+  const [repaymentStrategy, setRepaymentStrategy] = useState('AVALANCHE');
+  const [currencyCode, setCurrencyCode] = useState('GBP');
+  const [originalAmount, setOriginalAmount] = useState('');
+  const [outstandingBalance, setOutstandingBalance] = useState('');
   const [interestRate, setInterestRate] = useState('');
-  const [minPayment, setMinPayment] = useState('');
-  const [lender, setLender] = useState('');
+  const [minimumPayment, setMinimumPayment] = useState('');
+  const [creditorName, setCreditorName] = useState('');
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [notes, setNotes] = useState('');
 
   async function handleSubmit() {
-    if (!name || !principal || !outstanding) {
+    if (!name || !originalAmount || !outstandingBalance) {
       Alert.alert('Validation', 'Name, principal, and outstanding balance are required');
       return;
     }
     try {
       await createDebt.mutateAsync({
         name,
-        type,
-        strategy,
-        currency,
-        principalAmount: parseFloat(principal),
-        outstandingBalance: parseFloat(outstanding),
-        interestRate: parseFloat(interestRate) || 0,
-        minimumPayment: parseFloat(minPayment) || undefined,
-        lender: lender || undefined,
+        debtType,
+        repaymentStrategy,
+        currencyCode,
+        originalAmount: parseFloat(originalAmount),
+        outstandingBalance: parseFloat(outstandingBalance),
+        interestRate: parseFloat(interestRate) || undefined,
+        minimumPayment: parseFloat(minimumPayment) || undefined,
+        creditorName: creditorName || undefined,
+        startDate,
         notes: notes || undefined,
-        status: 'ACTIVE',
       });
       router.back();
     } catch (e: any) {
       Alert.alert('Error', e.message);
     }
-  }
-
-  function Chips({ options, value, onSelect }: { options: string[]; value: string; onSelect: (v: string) => void }) {
-    return (
-      <View style={styles.chips}>
-        {options.map((o) => (
-          <Card key={o} color={value === o ? Colors.primary : Colors.surfaceContainerLowest} padded={false} style={{ paddingHorizontal: 12, paddingVertical: 8, borderWidth: 2, borderColor: value === o ? Colors.primary : Colors.outlineVariant }}>
-            <Text
-              onPress={() => onSelect(o)}
-              style={[styles.chipLabel, { color: value === o ? Colors.white : Colors.onSurface }]}
-            >
-              {o.replace(/_/g, ' ')}
-            </Text>
-          </Card>
-        ))}
-      </View>
-    );
   }
 
   return (
@@ -86,24 +92,25 @@ export default function NewDebtScreen() {
 
           <View style={styles.section}>
             <Text style={styles.label}>Type</Text>
-            <Chips options={DEBT_TYPES} value={type} onSelect={setType} />
+            <Chips options={DEBT_TYPES} value={debtType} onSelect={setDebtType} />
           </View>
 
           <View style={styles.section}>
             <Text style={styles.label}>Payoff Strategy</Text>
-            <Chips options={STRATEGIES} value={strategy} onSelect={setStrategy} />
+            <Chips options={STRATEGIES} value={repaymentStrategy} onSelect={setRepaymentStrategy} />
           </View>
 
           <View style={styles.section}>
             <Text style={styles.label}>Currency</Text>
-            <Chips options={['GBP', 'INR', 'USD']} value={currency} onSelect={setCurrency} />
+            <Chips options={['GBP', 'INR', 'USD']} value={currencyCode} onSelect={setCurrencyCode} />
           </View>
 
-          <Input label="Original Principal *" value={principal} onChangeText={setPrincipal} placeholder="0.00" keyboardType="decimal-pad" />
-          <Input label="Outstanding Balance *" value={outstanding} onChangeText={setOutstanding} placeholder="0.00" keyboardType="decimal-pad" />
+          <Input label="Original Principal *" value={originalAmount} onChangeText={setOriginalAmount} placeholder="0.00" keyboardType="decimal-pad" />
+          <Input label="Outstanding Balance *" value={outstandingBalance} onChangeText={setOutstandingBalance} placeholder="0.00" keyboardType="decimal-pad" />
           <Input label="Interest Rate (%)" value={interestRate} onChangeText={setInterestRate} placeholder="0.0" keyboardType="decimal-pad" />
-          <Input label="Minimum Monthly Payment" value={minPayment} onChangeText={setMinPayment} placeholder="0.00" keyboardType="decimal-pad" />
-          <Input label="Lender / Institution" value={lender} onChangeText={setLender} placeholder="e.g. HSBC" />
+          <Input label="Minimum Monthly Payment" value={minimumPayment} onChangeText={setMinimumPayment} placeholder="0.00" keyboardType="decimal-pad" />
+          <Input label="Lender / Institution" value={creditorName} onChangeText={setCreditorName} placeholder="e.g. HSBC" />
+          <Input label="Start Date *" value={startDate} onChangeText={setStartDate} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" />
           <Input label="Notes" value={notes} onChangeText={setNotes} placeholder="Optional..." multiline numberOfLines={3} />
 
           <Button label="Add Debt" onPress={handleSubmit} loading={createDebt.isPending} style={styles.btn} />
@@ -120,7 +127,6 @@ const styles = StyleSheet.create({
   section: { gap: Spacing.sm },
   label: { ...Typography.label, color: Colors.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: 0.8 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { paddingHorizontal: 12, paddingVertical: 8, borderWidth: 2 },
   chipLabel: { ...Typography.label, fontWeight: '600' },
   btn: { marginTop: Spacing.sm },
 });

@@ -48,10 +48,10 @@ export default function DebtsScreen() {
   const { data: plan } = useDebtPlan();
 
   const active = debts?.filter((d) => d.status === 'ACTIVE') ?? [];
-  const totalDebt = active.reduce((s, d) => s + d.outstandingBalance, 0);
+  const totalDebt = active.reduce((s, d) => s + Number(d.outstandingBalance), 0);
 
   const donutData = active.map((d, i) => ({
-    value: d.outstandingBalance,
+    value: Number(d.outstandingBalance),
     color: RING_COLORS[i % RING_COLORS.length],
     label: d.name,
   }));
@@ -119,9 +119,9 @@ export default function DebtsScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Active Debts</Text>
             {active.map((debt, i) => {
-              const pct = debt.principalAmount > 0
-                ? ((debt.principalAmount - debt.outstandingBalance) / debt.principalAmount) * 100
-                : 0;
+              const principal = Number(debt.originalAmount);
+              const outstanding = Number(debt.outstandingBalance);
+              const pct = principal > 0 ? ((principal - outstanding) / principal) * 100 : 0;
               const ringColor = RING_COLORS[i % RING_COLORS.length];
               return (
                 <TouchableOpacity
@@ -132,17 +132,17 @@ export default function DebtsScreen() {
                   <View style={styles.debtCard}>
                     <View style={styles.debtTop}>
                       <View style={[styles.debtIconWrap, { backgroundColor: Colors.tertiaryFixed }]}>
-                        <Text style={styles.debtEmoji}>{debtTypeEmoji[debt.type] ?? '📋'}</Text>
+                        <Text style={styles.debtEmoji}>{debtTypeEmoji[debt.debtType] ?? '📋'}</Text>
                       </View>
                       <View style={styles.debtInfo}>
                         <Text style={styles.debtName}>{debt.name}</Text>
-                        {debt.lender && <Text style={styles.debtLender}>{debt.lender}</Text>}
+                        {debt.creditorName && <Text style={styles.debtLender}>{debt.creditorName}</Text>}
                       </View>
                       <View style={styles.debtRight}>
                         <Text style={[styles.debtBalance, { color: Colors.primary }]}>
-                          {fmt(debt.outstandingBalance, debt.currency)}
+                          {fmt(outstanding, debt.currencyCode)}
                         </Text>
-                        <Badge label={debt.strategy} variant="info" />
+                        <Badge label={debt.repaymentStrategy} variant="info" />
                       </View>
                     </View>
                     <View style={styles.progressBg}>
@@ -157,7 +157,7 @@ export default function DebtsScreen() {
                       <Text style={[styles.debtPct, { color: Colors.secondary }]}>
                         {Math.round(pct)}% paid off
                       </Text>
-                      {debt.interestRate > 0 && (
+                      {Number(debt.interestRate) > 0 && (
                         <Text style={styles.debtRate}>{debt.interestRate}% APR</Text>
                       )}
                     </View>

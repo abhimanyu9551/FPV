@@ -4,17 +4,20 @@ import { api } from '../api';
 export interface Debt {
   id: string;
   name: string;
-  type: string;
-  status: string;
-  strategy: string;
-  principalAmount: number;
+  debtType: string;
+  creditorName: string | null;
+  originalAmount: number;
   outstandingBalance: number;
-  interestRate: number;
-  currency: string;
-  minimumPayment?: number;
-  dueDate?: string;
-  lender?: string;
-  notes?: string;
+  interestRate: number | null;
+  minimumPayment: number | null;
+  paymentDueDay: number | null;
+  currencyCode: string;
+  startDate: string;
+  maturityDate: string | null;
+  repaymentStrategy: string;
+  priority: number;
+  notes: string | null;
+  status: string;
 }
 
 export interface DebtPayment {
@@ -36,6 +39,23 @@ export interface DebtPlan {
   }>;
   totalMonths: number;
   totalInterestSaved: number;
+}
+
+export interface CreateDebtInput {
+  name: string;
+  debtType: string;
+  creditorName?: string;
+  originalAmount: number;
+  outstandingBalance: number;
+  interestRate?: number;
+  minimumPayment?: number;
+  paymentDueDay?: number;
+  currencyCode?: string;
+  startDate: string;
+  maturityDate?: string;
+  repaymentStrategy?: string;
+  priority?: number;
+  notes?: string;
 }
 
 export function useDebts() {
@@ -71,7 +91,7 @@ export function useDebtPayments(debtId: string) {
 export function useCreateDebt() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<Debt>) => api.post('/debts', data),
+    mutationFn: (data: CreateDebtInput) => api.post('/debts', data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['debts'] }),
   });
 }
@@ -79,7 +99,7 @@ export function useCreateDebt() {
 export function useUpdateDebt(id: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<Debt>) => api.put(`/debts/${id}`, data),
+    mutationFn: (data: Partial<Omit<Debt, 'id'>>) => api.put(`/debts/${id}`, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['debts'] }),
   });
 }

@@ -71,6 +71,10 @@ export const debtsDAL = {
     })
   },
 
+  async deleteById(id: string) {
+    return db.debt.delete({ where: { id } })
+  },
+
   async listPaymentsInRange(from: Date, to: Date) {
     return db.debtPayment.findMany({
       where: { paymentDate: { gte: from, lte: to } },
