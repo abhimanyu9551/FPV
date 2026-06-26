@@ -3,7 +3,7 @@
 // Note: UserProfile IDs must match Supabase auth.users UUIDs.
 //       After creating users in Supabase Auth, update the IDs below.
 
-import { PrismaClient, UserRole, AccountType, DebtType, DebtStrategy, DebtStatus, InvestmentType, CategoryType, RemittanceStatus } from '@prisma/client'
+import { PrismaClient, UserRole, AccountType, DebtType, DebtStrategy, DebtStatus, InvestmentType, CategoryType, RemittanceStatus, RuleCategory, AllocationType, AllocationTarget, PaymentResponsibility } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
@@ -166,6 +166,105 @@ async function main() {
   })
 
   console.log('✓ Income sources seeded')
+
+  // ── Rule Templates ──────────────────────────────────────────────
+  type RuleBlueprint = {
+    name: string; category: RuleCategory; priority: number;
+    allocationType: AllocationType; allocationValue?: number; allocationPercent?: number;
+    targetType: AllocationTarget; paymentResponsibility: PaymentResponsibility;
+  }
+
+  const ruleTemplates: Array<{ id: string; name: string; description: string; profileType: string; rules: RuleBlueprint[] }> = [
+    {
+      id: 'tpl-single-professional',
+      name: 'Single Professional',
+      description: 'Standard allocation for a single earner: savings first, then fixed expenses.',
+      profileType: 'Single Professional',
+      rules: [
+        { name: 'Emergency Fund', category: 'SAVINGS', priority: 1, allocationType: 'PERCENTAGE', allocationPercent: 10, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'Rent', category: 'RENT', priority: 2, allocationType: 'FIXED_AMOUNT', allocationValue: 800, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'Credit Card Payment', category: 'CREDIT_CARD', priority: 3, allocationType: 'FIXED_AMOUNT', allocationValue: 200, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'Investment', category: 'INVESTMENT', priority: 4, allocationType: 'PERCENTAGE', allocationPercent: 10, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'Grocery', category: 'GROCERY', priority: 5, allocationType: 'FIXED_AMOUNT', allocationValue: 300, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'Leisure', category: 'LEISURE', priority: 6, allocationType: 'PERCENTAGE', allocationPercent: 5, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'General Savings', category: 'SAVINGS', priority: 99, allocationType: 'REMAINING', targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+      ],
+    },
+    {
+      id: 'tpl-married-couple',
+      name: 'Married Couple',
+      description: 'Shared household expenses split between two incomes.',
+      profileType: 'Married Couple',
+      rules: [
+        { name: 'Savings (Individual)', category: 'SAVINGS', priority: 1, allocationType: 'PERCENTAGE', allocationPercent: 15, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'Rent (Shared)', category: 'RENT', priority: 2, allocationType: 'FIXED_AMOUNT', allocationValue: 1200, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'SHARED' },
+        { name: 'Credit Card (Shared)', category: 'CREDIT_CARD', priority: 3, allocationType: 'FIXED_AMOUNT', allocationValue: 400, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'SHARED' },
+        { name: 'Grocery (Shared)', category: 'GROCERY', priority: 4, allocationType: 'FIXED_AMOUNT', allocationValue: 500, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'SHARED' },
+        { name: 'Investment', category: 'INVESTMENT', priority: 5, allocationType: 'PERCENTAGE', allocationPercent: 10, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'Remaining to Savings', category: 'SAVINGS', priority: 99, allocationType: 'REMAINING', targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+      ],
+    },
+    {
+      id: 'tpl-indian-expat',
+      name: 'Indian Expat',
+      description: 'UK salary with regular India transfers and family support.',
+      profileType: 'Indian Expat',
+      rules: [
+        { name: 'Rent', category: 'RENT', priority: 1, allocationType: 'FIXED_AMOUNT', allocationValue: 900, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'India Transfer', category: 'INDIAN_ACCOUNT', priority: 2, allocationType: 'FIXED_AMOUNT', allocationValue: 500, targetType: 'REMITTANCE_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'EMI (India)', category: 'EMI', priority: 3, allocationType: 'FIXED_AMOUNT', allocationValue: 300, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'UK Savings', category: 'SAVINGS', priority: 4, allocationType: 'PERCENTAGE', allocationPercent: 15, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'Grocery', category: 'GROCERY', priority: 5, allocationType: 'FIXED_AMOUNT', allocationValue: 350, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'Insurance', category: 'INSURANCE', priority: 6, allocationType: 'FIXED_AMOUNT', allocationValue: 100, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'Remaining to Savings', category: 'SAVINGS', priority: 99, allocationType: 'REMAINING', targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+      ],
+    },
+    {
+      id: 'tpl-fire',
+      name: 'FIRE Strategy',
+      description: 'Financial Independence / Retire Early — maximise savings and investment.',
+      profileType: 'FIRE Strategy',
+      rules: [
+        { name: 'Emergency Fund', category: 'SAVINGS', priority: 1, allocationType: 'PERCENTAGE', allocationPercent: 10, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'Index Fund Investment', category: 'INVESTMENT', priority: 2, allocationType: 'PERCENTAGE', allocationPercent: 30, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'Rent', category: 'RENT', priority: 3, allocationType: 'FIXED_AMOUNT', allocationValue: 800, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'Grocery', category: 'GROCERY', priority: 4, allocationType: 'FIXED_AMOUNT', allocationValue: 250, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'Utilities', category: 'UTILITIES', priority: 5, allocationType: 'FIXED_AMOUNT', allocationValue: 150, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'Remaining to FIRE Pot', category: 'INVESTMENT', priority: 99, allocationType: 'REMAINING', targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+      ],
+    },
+    {
+      id: 'tpl-debt-payoff',
+      name: 'Debt Payoff',
+      description: 'Aggressive debt elimination using avalanche method.',
+      profileType: 'Debt Payoff',
+      rules: [
+        { name: 'Credit Card Minimum', category: 'CREDIT_CARD', priority: 1, allocationType: 'FIXED_AMOUNT', allocationValue: 50, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'Loan EMI', category: 'EMI', priority: 2, allocationType: 'FIXED_AMOUNT', allocationValue: 400, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'Rent', category: 'RENT', priority: 3, allocationType: 'FIXED_AMOUNT', allocationValue: 800, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'Grocery', category: 'GROCERY', priority: 4, allocationType: 'FIXED_AMOUNT', allocationValue: 300, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'Emergency Buffer', category: 'SAVINGS', priority: 5, allocationType: 'FIXED_AMOUNT', allocationValue: 100, targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+        { name: 'Extra Debt Payment', category: 'DEBT', priority: 99, allocationType: 'REMAINING', targetType: 'BUDGET_CATEGORY', paymentResponsibility: 'INDIVIDUAL' },
+      ],
+    },
+  ]
+
+  for (const tpl of ruleTemplates) {
+    await prisma.ruleTemplate.upsert({
+      where: { id: tpl.id },
+      update: { name: tpl.name, description: tpl.description, rules: tpl.rules },
+      create: {
+        id: tpl.id,
+        name: tpl.name,
+        description: tpl.description,
+        profileType: tpl.profileType,
+        isSystem: true,
+        rules: tpl.rules,
+      },
+    })
+  }
+
+  console.log('✓ Rule templates seeded (5 templates)')
 
   console.log('')
   console.log('✅ Seed complete!')

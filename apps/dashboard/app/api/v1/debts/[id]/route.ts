@@ -4,8 +4,21 @@ import { debtsDAL } from '@/lib/dal/debts.dal'
 import { z } from 'zod'
 
 const updateSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  debtType: z.enum(['CREDIT_CARD', 'PERSONAL_LOAN', 'FAMILY_LOAN', 'FRIEND_LOAN', 'INFORMAL', 'MORTGAGE', 'STUDENT_LOAN', 'OTHER']).optional(),
+  creditorName: z.string().max(100).nullable().optional(),
+  originalAmount: z.number().positive().optional(),
+  outstandingBalance: z.number().nonnegative().optional(),
+  interestRate: z.number().min(0).max(100).nullable().optional(),
+  minimumPayment: z.number().nonnegative().nullable().optional(),
+  paymentDueDay: z.number().int().min(1).max(31).nullable().optional(),
+  currencyCode: z.string().optional(),
+  startDate: z.coerce.date().optional(),
+  maturityDate: z.coerce.date().nullable().optional(),
+  repaymentStrategy: z.enum(['SNOWBALL', 'AVALANCHE', 'CUSTOM']).optional(),
+  priority: z.number().int().min(0).optional(),
   savingsAllocationPercent: z.number().min(0).max(100).nullable().optional(),
-  notes: z.string().optional().nullable(),
+  notes: z.string().max(500).nullable().optional(),
   status: z.enum(['ACTIVE', 'PAID_OFF', 'DEFERRED', 'WRITTEN_OFF']).optional(),
 })
 

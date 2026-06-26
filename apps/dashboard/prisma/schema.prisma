@@ -41,6 +41,9 @@ model UserProfile {
   debtPayments         DebtPayment[]
   monthlySnapshots     MonthlySnapshot[]
   exchangeRates        ExchangeRate[]
+  financialRules       FinancialRule[]
+  financialRuleSplits  FinancialRuleSplit[]
+  processingSessions   ProcessingSession[]
 
   @@map("user_profiles")
 }
@@ -180,6 +183,7 @@ model IncomeSource {
   allocationRules  AllocationRule[]
   incomeEntries    IncomeEntry[]
   sharedRuleSplits SharedAllocationRuleSplit[]
+  financialRules   FinancialRule[]
 
   @@index([userId, isActive])
   @@map("income_sources")
@@ -286,17 +290,20 @@ model AllocationLedger {
 }
 
 model AllocationLedgerItem {
-  id               String  @id @default(cuid())
-  ledgerId         String
-  allocationRuleId String
-  allocatedAmount  Decimal @db.Decimal(15, 2) // GBP
-  label            String  // Snapshot of rule label at execution time
-  targetType       AllocationTarget
-  targetId         String?
-  createdAt        DateTime @default(now())
+  id                  String   @id @default(cuid())
+  ledgerId            String
+  allocationRuleId    String?  // Old-engine rules (nullable for new engine items)
+  financialRuleId     String?  // New rule engine rules
+  processingSessionId String?
+  allocatedAmount     Decimal  @db.Decimal(15, 2)
+  label               String
+  targetType          AllocationTarget
+  targetId            String?
+  createdAt           DateTime @default(now())
 
-  ledger          AllocationLedger @relation(fields: [ledgerId], references: [id])
-  allocationRule  AllocationRule   @relation(fields: [allocationRuleId], references: [id])
+  ledger          AllocationLedger  @relation(fields: [ledgerId], references: [id])
+  allocationRule  AllocationRule?   @relation(fields: [allocationRuleId], references: [id])
+  financialRule   FinancialRule?    @relation(fields: [financialRuleId], references: [id])
 
   @@index([ledgerId])
   @@map("allocation_ledger_items")
@@ -502,8 +509,9 @@ model SavingsGoal {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  account       Account?             @relation(fields: [accountId], references: [id])
-  contributions SavingsContribution[]
+  account        Account?             @relation(fields: [accountId], references: [id])
+  contributions  SavingsContribution[]
+  financialRules FinancialRule[]
 
   @@index([isActive, priority])
   @@map("savings_goals")
@@ -829,4 +837,188 @@ model SharedAllocationRuleSplit {
 
   @@unique([ruleId, incomeSourceId])
   @@map("shared_allocation_rule_splits")
+}
+
+// ─────────────────────────────────────────────────────────────
+// MODULE: FINANCIAL RULE ENGINE (GENERIC)
+// Unified rule model that supersedes AllocationRule and
+// SharedAllocationRule. Old models remain for backward compat.
+// ─────────────────────────────────────────────────────────────
+
+enum RuleCategory {
+  SAVINGS
+  INVESTMENT
+  DEBT
+  CREDIT_CARD
+  EMI
+  RENT
+  MORTGAGE
+  UTILITIES
+  GROCERY
+  LEISURE
+  INSURANCE
+  INDIAN_ACCOUNT
+  CUSTOM
+
+  @@map("rule_category")
+}
+
+enum PaymentResponsibility {
+  INDIVIDUAL
+  SHARED
+
+  @@map("payment_responsibility")
+}
+
+enum CarryForwardTarget {
+  LEAVE_IN_ACCOUNT
+  MOVE_TO_SAVINGS
+  MOVE_TO_INVESTMENT
+  MOVE_TO_GOAL
+
+  @@map("carry_forward_target")
+}
+
+enum ConditionOperator {
+  GT
+  GTE
+  LT
+  LTE
+  EQ
+  BETWEEN
+  MONTH_IS
+  INCOME_SOURCE_IS
+
+  @@map("condition_operator")
+}
+
+enum ProcessingSessionType {
+  SINGLE_ENTRY
+  MONTHLY
+
+  @@map("processing_session_type")
+}
+
+enum ProcessingSessionStatus {
+  COMPLETED
+  UNDONE
+
+  @@map("processing_session_status")
+}
+
+model FinancialRule {
+  id                    String                @id @default(cuid())
+  userId                String
+  name                  String
+  description           String?
+  notes                 String?
+  category              RuleCategory
+  priority              Int                   // Lower = executes first
+  isActive              Boolean               @default(true)
+  startDate             DateTime?             @db.Date
+  endDate               DateTime?             @db.Date
+  allocationType        AllocationType
+  allocationValue       Decimal?              @db.Decimal(15, 2)
+  allocationPercent     Decimal?              @db.Decimal(5, 2)
+  minAmount             Decimal?              @db.Decimal(15, 2)
+  maxAmount             Decimal?              @db.Decimal(15, 2)
+  targetType            AllocationTarget
+  targetId              String?
+  paymentResponsibility PaymentResponsibility @default(INDIVIDUAL)
+  incomeSourceId        String?               // null = all sources
+  carryForward          Boolean               @default(false)
+  carryForwardTarget    CarryForwardTarget?
+  savingsGoalId         String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  user         UserProfile              @relation(fields: [userId], references: [id])
+  incomeSource IncomeSource?            @relation(fields: [incomeSourceId], references: [id])
+  savingsGoal  SavingsGoal?             @relation(fields: [savingsGoalId], references: [id])
+  splits       FinancialRuleSplit[]
+  conditions   FinancialRuleCondition[]
+  versions     FinancialRuleVersion[]
+  ledgerItems  AllocationLedgerItem[]
+
+  @@index([userId, isActive, priority])
+  @@map("financial_rules")
+}
+
+model FinancialRuleSplit {
+  id      String  @id @default(cuid())
+  ruleId  String
+  userId  String
+  percent Decimal @db.Decimal(5, 2) // Must sum to 100 per rule
+
+  rule FinancialRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+  user UserProfile   @relation(fields: [userId], references: [id])
+
+  @@unique([ruleId, userId])
+  @@map("financial_rule_splits")
+}
+
+model FinancialRuleCondition {
+  id             String            @id @default(cuid())
+  ruleId         String
+  conditionField String            // "salary", "month", "creditCardBalance", etc.
+  operator       ConditionOperator
+  value          Decimal?          @db.Decimal(15, 2)
+  valueB         Decimal?          @db.Decimal(15, 2) // For BETWEEN
+  stringValue    String?           // For MONTH_IS, INCOME_SOURCE_IS
+  createdAt      DateTime          @default(now())
+
+  rule FinancialRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId])
+  @@map("financial_rule_conditions")
+}
+
+model FinancialRuleVersion {
+  id          String   @id @default(cuid())
+  ruleId      String
+  version     Int
+  snapshot    Json     // Full rule state at time of change
+  changedById String
+  changedAt   DateTime @default(now())
+  changeNote  String?
+
+  rule FinancialRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@unique([ruleId, version])
+  @@index([ruleId, version(sort: Desc)])
+  @@map("financial_rule_versions")
+}
+
+model ProcessingSession {
+  id             String                  @id @default(cuid())
+  userId         String
+  sessionType    ProcessingSessionType
+  processedAt    DateTime                @default(now())
+  incomeEntryId  String?                 // For SINGLE_ENTRY sessions
+  year           Int?                    // For MONTHLY sessions
+  month          Int?
+  status         ProcessingSessionStatus @default(COMPLETED)
+  totalIncome    Decimal                 @db.Decimal(15, 2)
+  totalAllocated Decimal                 @db.Decimal(15, 2)
+  remainingCash  Decimal                 @db.Decimal(15, 2)
+  hasWarnings    Boolean                 @default(false)
+  ledgerIds      String[]                // AllocationLedger IDs created (for undo)
+  undoneAt       DateTime?
+
+  user UserProfile @relation(fields: [userId], references: [id])
+
+  @@index([userId, processedAt(sort: Desc)])
+  @@map("processing_sessions")
+}
+
+model RuleTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  profileType String   // "Single Professional", "Married Couple", etc.
+  isSystem    Boolean  @default(true)
+  rules       Json     // Array of rule blueprint objects
+  createdAt   DateTime @default(now())
+
+  @@map("rule_templates")
 }

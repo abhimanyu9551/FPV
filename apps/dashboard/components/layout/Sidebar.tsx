@@ -18,11 +18,13 @@ import {
   FileText,
   Settings,
   LogOut,
+  Zap,
 } from 'lucide-react'
 
 const navItems = [
   { href: '/dashboard',     label: 'Overview',        icon: LayoutDashboard },
   { href: '/income',        label: 'Income',           icon: TrendingUp },
+  { href: '/rules',         label: 'Rules',            icon: Zap },
   { href: '/allocation',    label: 'Allocation',       icon: PieChart },
   { href: '/debts',         label: 'Debts',            icon: Wallet },
   { href: '/credit-cards',  label: 'Credit Cards',     icon: CreditCard },

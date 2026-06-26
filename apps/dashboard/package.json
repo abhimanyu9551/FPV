@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "migrate:rules": "tsx scripts/migrate-rules-to-financial-rules.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

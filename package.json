@@ -25,5 +25,21 @@
     "node": ">=20.0.0",
     "pnpm": ">=9.0.0"
   },
-  "packageManager": "pnpm@9.15.4"
+  "packageManager": "pnpm@9.15.4",
+  "pnpm": {
+    "overrides": {
+      "@types/react": "^19.2.0",
+      "react": "19.2.3",
+      "react-dom": "19.2.3"
+    },
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "@react-navigation/native>react": "19",
+        "@react-navigation/core>react": "19",
+        "@react-navigation/bottom-tabs>react": "19",
+        "@react-navigation/elements>react": "19",
+        "@react-navigation/native-stack>react": "19"
+      }
+    }
+  }
 }

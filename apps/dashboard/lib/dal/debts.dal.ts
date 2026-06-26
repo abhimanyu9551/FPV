@@ -38,16 +38,29 @@ export const debtsDAL = {
     balanceAfter: number
     isMinimumPayment: boolean
     notes?: string
+    chargedToCreditCardId?: string
   }) {
+    const { chargedToCreditCardId, ...paymentData } = data
+    const debtUpdate = db.debt.update({
+      where: { id: data.debtId },
+      data: {
+        outstandingBalance: data.balanceAfter,
+        status: data.balanceAfter <= 0 ? 'PAID_OFF' : 'ACTIVE',
+      },
+    })
+    if (chargedToCreditCardId) {
+      return db.$transaction([
+        db.debtPayment.create({ data: paymentData }),
+        debtUpdate,
+        db.debt.update({
+          where: { id: chargedToCreditCardId },
+          data: { outstandingBalance: { increment: data.principalPaid } },
+        }),
+      ])
+    }
     return db.$transaction([
-      db.debtPayment.create({ data }),
-      db.debt.update({
-        where: { id: data.debtId },
-        data: {
-          outstandingBalance: data.balanceAfter,
-          status: data.balanceAfter <= 0 ? 'PAID_OFF' : 'ACTIVE',
-        },
-      }),
+      db.debtPayment.create({ data: paymentData }),
+      debtUpdate,
     ])
   },
 

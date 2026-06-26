@@ -24,7 +24,12 @@ export const createDebtPaymentSchema = z.object({
   interestPaid: z.number().nonnegative().default(0),
   isMinimumPayment: z.boolean().default(false),
   notes: z.string().max(500).optional(),
-})
+  paymentMethod: z.enum(['SAVINGS', 'CREDIT_CARD']).default('SAVINGS'),
+  chargedToCreditCardId: z.string().optional(),
+}).refine(
+  (d) => d.paymentMethod !== 'CREDIT_CARD' || !!d.chargedToCreditCardId,
+  { message: 'chargedToCreditCardId is required when paymentMethod is CREDIT_CARD', path: ['chargedToCreditCardId'] }
+)
 
 export const createCreditCardSchema = z.object({
   debtId: z.string().min(1),

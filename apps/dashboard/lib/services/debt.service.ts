@@ -51,6 +51,7 @@ export const debtService = {
       balanceAfter,
       isMinimumPayment: input.isMinimumPayment,
       notes: input.notes,
+      chargedToCreditCardId: input.chargedToCreditCardId,
     })
   },
 
