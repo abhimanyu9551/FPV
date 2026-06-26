@@ -68,6 +68,8 @@ export async function POST(req: NextRequest) {
       ? sharedAllocationEngine.run(sourceInputs, ruleInputs)
       : null
 
+    const sourceNameMap = new Map(sourceInputs.map((s) => [s.id, s.name]))
+
     return NextResponse.json({
       period: { year, month },
       entries: entries.map((e) => ({
@@ -97,9 +99,12 @@ export async function POST(req: NextRequest) {
               category: item.category,
               totalAllocated: item.totalAllocated.toNumber(),
               percentOfCombined: item.percentOfCombined.toNumber(),
-              bySource: Object.fromEntries(
-                Object.entries(item.bySource).map(([k, v]) => [k, v.toNumber()])
-              ),
+              sourceBreakdown: Object.entries(item.bySource)
+                .filter(([, v]) => v.greaterThan(0))
+                .map(([sourceId, v]) => ({
+                  sourceName: sourceNameMap.get(sourceId) ?? sourceId,
+                  amount: v.toNumber(),
+                })),
             })),
             sourceRemaining: Object.fromEntries(
               Object.entries(result.sourceRemaining).map(([k, v]) => [k, v.toNumber()])
