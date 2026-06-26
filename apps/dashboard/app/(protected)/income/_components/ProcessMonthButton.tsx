@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -8,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import {
   CreditCard, Landmark, Home, ShoppingCart, Theater, TrendingUp, PiggyBank,
   ClipboardList, Circle, CheckCircle2, XCircle, ChevronRight, ChevronLeft,
-  Loader2, AlertTriangle,
+  Loader2, AlertTriangle, PartyPopper,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -70,12 +71,16 @@ function monthName(m: number) {
 // ── Component ──────────────────────────────────────────────────────────────
 
 export default function ProcessMonthButton({ year, month }: { year: number; month: number }) {
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [open, setOpen] = useState(false)
-  const [step, setStep] = useState<'cc' | 'breakdown'>('cc')
+  const [step, setStep] = useState<'cc' | 'breakdown' | 'done'>('cc')
   const [result, setResult] = useState<ProcessResult | null>(null)
   const [error, setError] = useState('')
   const [ccOverrides, setCcOverrides] = useState<CcOverride[]>([])
+  const [confirming, setConfirming] = useState(false)
+  const [confirmError, setConfirmError] = useState('')
+  const [confirmedCount, setConfirmedCount] = useState(0)
 
   async function handleOpen() {
     setLoading(true)
@@ -157,6 +162,37 @@ export default function ProcessMonthButton({ year, month }: { year: number; mont
     const remaining = combinedIncome - ccTotal - emiTotal
 
     return { combinedIncome, ccTotal, emiWithStatus, emiTotal, remaining }
+  }
+
+  async function handleConfirm() {
+    setConfirming(true)
+    setConfirmError('')
+    try {
+      // Only send overrides where user chose full balance and entered an amount
+      const overrides = ccOverrides
+        .filter((cc) => cc.payFull && parseFloat(cc.fullAmount) > 0)
+        .map((cc) => ({ ruleId: cc.ruleId, amount: parseFloat(cc.fullAmount) }))
+
+      const res = await fetch('/api/v1/salary/confirm-month', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ year, month, ccOverrides: overrides }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        setConfirmError(data.error || 'Failed to confirm')
+        return
+      }
+
+      setConfirmedCount(data.processed ?? 0)
+      setStep('done')
+      router.refresh()
+    } catch {
+      setConfirmError('Network error — please try again')
+    } finally {
+      setConfirming(false)
+    }
   }
 
   const breakdown = step === 'breakdown' ? getBreakdown() : null
@@ -447,11 +483,16 @@ export default function ProcessMonthButton({ year, month }: { year: number; mont
                           </div>
                         )}
 
+                        {confirmError && (
+                          <p className="text-destructive text-sm">{confirmError}</p>
+                        )}
+
                         <div className="flex gap-2 pt-1">
                           {ccOverrides.length > 0 && (
                             <Button
                               variant="outline"
                               onClick={() => setStep('cc')}
+                              disabled={confirming}
                               className="gap-1"
                             >
                               <ChevronLeft className="h-4 w-4" />
@@ -459,12 +500,45 @@ export default function ProcessMonthButton({ year, month }: { year: number; mont
                             </Button>
                           )}
                           <Button
-                            onClick={() => setOpen(false)}
+                            onClick={handleConfirm}
+                            disabled={confirming}
                             className="flex-1 bg-success text-success-foreground hover:bg-success/90"
                           >
-                            Done
+                            {confirming ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Processing…
+                              </>
+                            ) : (
+                              'Confirm & Process'
+                            )}
                           </Button>
                         </div>
+                      </div>
+                    )}
+
+                    {/* ── Step 3: Success ── */}
+                    {step === 'done' && (
+                      <div className="flex flex-col items-center gap-4 py-6 text-center">
+                        <div className="rounded-full bg-success/15 p-4">
+                          <PartyPopper className="h-8 w-8 text-success" />
+                        </div>
+                        <div>
+                          <p className="text-lg font-bold text-foreground">
+                            {monthName(month)} {year} processed!
+                          </p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {confirmedCount} income{' '}
+                            {confirmedCount === 1 ? 'entry' : 'entries'} marked as
+                            processed and allocation recorded.
+                          </p>
+                        </div>
+                        <Button
+                          onClick={() => setOpen(false)}
+                          className="w-full bg-success text-success-foreground hover:bg-success/90"
+                        >
+                          Done
+                        </Button>
                       </div>
                     )}
                   </>
